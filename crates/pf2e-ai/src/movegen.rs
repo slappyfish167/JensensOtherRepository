@@ -3,11 +3,13 @@
 //! distinct ones. This module prunes, never invents: every candidate it
 //! returns came from `CombatState::legal_actions`.
 
+use crate::keys::legality_key;
 use pf2e_core::combat::{Action, CombatState};
 use pf2e_core::conditions::ConditionKind as CK;
-use pf2e_core::grid::{creature_distance, within_reach, Pos};
+use pf2e_core::grid::{creature_distance, within_reach, MoveMap, Pos};
 use pf2e_core::models::statblock::StrikeRange;
 use pf2e_core::CombatantId;
+use std::collections::HashMap;
 
 #[derive(Debug, Clone, Copy)]
 pub struct MoveGenConfig {
@@ -23,10 +25,46 @@ impl Default for MoveGenConfig {
     }
 }
 
+/// Memo of the expensive, HP-independent inputs of candidate generation:
+/// the engine's legal action list and the actor's movement map. Keyed by
+/// [`legality_key`], which covers everything `legal_actions` reads.
+#[derive(Default)]
+pub struct MoveGenCache {
+    entries: HashMap<u64, (Vec<Action>, MoveMap)>,
+    pub hits: u64,
+}
+
+impl MoveGenCache {
+    pub const MAX_ENTRIES: usize = 20_000;
+
+    pub fn candidates(&mut self, state: &CombatState, cfg: &MoveGenConfig) -> Vec<Action> {
+        let Some(actor) = state.current_actor() else { return vec![] };
+        let key = legality_key(state, actor);
+        if let Some((legal, mm)) = self.entries.get(&key) {
+            self.hits += 1;
+            return candidates_from(state, cfg, legal.clone(), mm);
+        }
+        let legal = state.legal_actions();
+        let mm = state.movement(actor);
+        let out = candidates_from(state, cfg, legal.clone(), &mm);
+        if self.entries.len() >= Self::MAX_ENTRIES {
+            self.entries.clear();
+        }
+        self.entries.insert(key, (legal, mm));
+        out
+    }
+}
+
 pub fn candidates(state: &CombatState, cfg: &MoveGenConfig) -> Vec<Action> {
     let Some(actor) = state.current_actor() else { return vec![] };
+    candidates_from(state, cfg, state.legal_actions(), &state.movement(actor))
+}
+
+/// Prunes `all` (the engine's legal actions for the current actor, whose
+/// movement map is `mm`) to the tactically distinct candidates.
+pub fn candidates_from(state: &CombatState, cfg: &MoveGenConfig, all: Vec<Action>, mm: &MoveMap) -> Vec<Action> {
+    let Some(actor) = state.current_actor() else { return vec![] };
     let a = state.combatant(actor).expect("actor");
-    let all = state.legal_actions();
     let foes: Vec<_> = state
         .combatants
         .iter()
@@ -72,7 +110,6 @@ pub fn candidates(state: &CombatState, cfg: &MoveGenConfig) -> Vec<Action> {
     // Movement: squares from which we can attack each foe (closest first,
     // preferring flanking), plus a retreat square for ranged creatures.
     if !a.has(CK::Immobilized) {
-        let mm = state.movement(actor);
         let melee_reach = a.statblock.strikes.iter().filter_map(|s| match s.range {
             StrikeRange::Melee { reach_ft } => Some(reach_ft),
             _ => None,

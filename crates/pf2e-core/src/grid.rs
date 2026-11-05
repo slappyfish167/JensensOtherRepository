@@ -9,7 +9,46 @@ use crate::models::battlefield::{Battlefield, Terrain};
 use crate::stats::Size;
 use serde::{Deserialize, Serialize};
 use std::cmp::Reverse;
-use std::collections::{BTreeMap, BinaryHeap, HashSet};
+use std::collections::{BTreeMap, BinaryHeap, HashMap, HashSet};
+use std::hash::{BuildHasherDefault, Hasher};
+
+/// Multiplicative hasher for small integer keys (the pathfinder's tables).
+/// Deterministic and not DoS-resistant — fine for keys that are grid
+/// coordinates bounded by the map size.
+#[derive(Default, Clone, Copy)]
+pub struct GridHasher(u64);
+
+impl GridHasher {
+    #[inline]
+    fn add(&mut self, x: u64) {
+        self.0 = (self.0.rotate_left(5) ^ x).wrapping_mul(0x51_7c_c1_b7_27_22_0a_95);
+    }
+}
+
+impl Hasher for GridHasher {
+    fn write(&mut self, bytes: &[u8]) {
+        for b in bytes {
+            self.add(*b as u64);
+        }
+    }
+    fn write_u8(&mut self, i: u8) {
+        self.add(i as u64);
+    }
+    fn write_i32(&mut self, i: i32) {
+        self.add(i as u32 as u64);
+    }
+    fn write_u32(&mut self, i: u32) {
+        self.add(i as u64);
+    }
+    fn write_usize(&mut self, i: usize) {
+        self.add(i as u64);
+    }
+    fn finish(&self) -> u64 {
+        self.0
+    }
+}
+
+type GridMap<K, V> = HashMap<K, V, BuildHasherDefault<GridHasher>>;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Default, Serialize, Deserialize)]
 pub struct Pos {
@@ -95,8 +134,10 @@ pub struct Reach {
 #[derive(Debug, Clone, Default)]
 pub struct MoveMap {
     pub start: Pos,
+    /// Ordered: `destinations()` iterates it, and its order is observable.
     best: BTreeMap<Pos, Reach>,
-    prev: BTreeMap<(Pos, u8), (Pos, u8)>,
+    /// Lookup-only (path reconstruction), so a hash map is safe.
+    prev: GridMap<(Pos, u8), (Pos, u8)>,
 }
 
 impl MoveMap {
@@ -128,9 +169,15 @@ impl MoveMap {
     }
 }
 
+/// The squares of a space without allocating (hot path of the pathfinder).
+fn space(pos: Pos, size: Size) -> impl Iterator<Item = Pos> {
+    let s = size.squares();
+    (0..s).flat_map(move |dy| (0..s).map(move |dx| Pos::new(pos.x + dx, pos.y + dy)))
+}
+
 fn step_extra_cost(bf: &Battlefield, pos: Pos, size: Size, ignore_difficult: bool) -> Option<u32> {
     let mut extra = 0;
-    for sq in footprint(pos, size) {
+    for sq in space(pos, size) {
         let e = bf.terrain(sq).extra_cost()?;
         extra = extra.max(e);
     }
@@ -138,10 +185,10 @@ fn step_extra_cost(bf: &Battlefield, pos: Pos, size: Size, ignore_difficult: boo
 }
 
 /// Dijkstra over (square, diagonal parity). Deterministic: ties break on
-/// coordinates via the ordered heap.
+/// coordinates via the ordered heap; the hash maps are lookup-only.
 pub fn movement_map(bf: &Battlefield, start: Pos, rules: &MoveRules) -> MoveMap {
     let mut map = MoveMap { start, ..Default::default() };
-    let mut dist: BTreeMap<(Pos, u8), u32> = BTreeMap::new();
+    let mut dist: GridMap<(Pos, u8), u32> = GridMap::default();
     let mut heap = BinaryHeap::new();
     dist.insert((start, 0), 0);
     heap.push(Reverse((0u32, start.y, start.x, 0u8)));
@@ -151,7 +198,7 @@ pub fn movement_map(bf: &Battlefield, start: Pos, rules: &MoveRules) -> MoveMap 
         if dist.get(&(pos, parity)).copied() != Some(cost) {
             continue;
         }
-        if pos != start && footprint(pos, rules.size).iter().all(|sq| !rules.occupied.contains(sq)) {
+        if pos != start && space(pos, rules.size).all(|sq| !rules.occupied.contains(&sq)) {
             let better = map.best.get(&pos).map(|r| cost < r.cost_ft).unwrap_or(true);
             if better {
                 map.best.insert(pos, Reach { cost_ft: cost, state: (pos, parity) });
@@ -159,13 +206,16 @@ pub fn movement_map(bf: &Battlefield, start: Pos, rules: &MoveRules) -> MoveMap 
         }
         for (dx, dy) in [(-1, -1), (0, -1), (1, -1), (-1, 0), (1, 0), (-1, 1), (0, 1), (1, 1)] {
             let next = Pos::new(x + dx, y + dy);
-            let fp = footprint(next, rules.size);
-            if fp.iter().any(|sq| !bf.in_bounds(*sq) || rules.impassable.contains(sq)) {
+            if space(next, rules.size).any(|sq| !bf.in_bounds(sq) || rules.impassable.contains(&sq)) {
                 continue;
             }
             let Some(extra) = step_extra_cost(bf, next, rules.size, rules.ignore_difficult_terrain) else {
                 continue;
             };
+            // Thin walls: every square of the mover's space must cross freely.
+            if !bf.edges.is_empty() && space(pos, rules.size).any(|sq| bf.edge_blocks_step(sq, Pos::new(sq.x + dx, sq.y + dy))) {
+                continue;
+            }
             let diagonal = dx != 0 && dy != 0;
             // Moving diagonally past a wall corner is not allowed.
             if diagonal
@@ -245,6 +295,13 @@ pub fn segment_cells(a: (f64, f64), b: (f64, f64)) -> Vec<Pos> {
     out
 }
 
+/// Whether consecutive squares of a sampled segment cross a thin wall.
+/// A diagonal hop (the segment passing a square corner) uses the same
+/// conservative corner rule as movement.
+pub fn cells_cross_edge(bf: &Battlefield, cells: &[Pos]) -> bool {
+    !bf.edges.is_empty() && cells.windows(2).any(|w| bf.edge_blocks_step(w[0], w[1]))
+}
+
 /// Cover per the core rule: draw a line between the centers of the two
 /// spaces. Walls on it → standard cover; other creatures → lesser cover.
 /// No line of effect only if the center line and all four corner lines are
@@ -269,7 +326,8 @@ pub fn compute_cover(
         (target.x as f64 + s - inset, target.y as f64 + s - inset),
     ];
     let wall_blocked = |end: (f64, f64)| {
-        segment_cells(from, end).into_iter().any(|c| !own.contains(&c) && bf.terrain(c) == Terrain::Wall)
+        let cells = segment_cells(from, end);
+        cells.iter().any(|c| !own.contains(c) && bf.terrain(*c) == Terrain::Wall) || cells_cross_edge(bf, &cells)
     };
     let center_blocked = wall_blocked(to);
     let all_blocked = center_blocked && corners.iter().all(|c| wall_blocked(*c));
@@ -435,6 +493,50 @@ mod tests {
         let blockers: HashSet<Pos> = [Pos::new(5, 5)].into_iter().collect();
         let info = compute_cover(&open, Pos::new(2, 5), Size::Medium, Pos::new(8, 5), Size::Medium, &blockers);
         assert_eq!(info.cover, CoverLevel::Lesser);
+    }
+
+    #[test]
+    fn thin_walls_block_movement_and_line_of_effect() {
+        use crate::models::battlefield::Edge;
+        // A thin wall along x = 5 (east borders of column 4), rows 0..10, with
+        // a one-square door gap at y = 9.
+        let mut bf = Battlefield::open(10, 10);
+        for y in 0..9 {
+            bf.edges.insert(Edge::east(4, y));
+        }
+        bf.validate().unwrap();
+        let rules = MoveRules { speed_ft: 120, size: Size::Medium, ..Default::default() };
+        let m = movement_map(&bf, Pos::new(4, 0), &rules);
+        // Must walk down to the gap (y = 9) and back up: 45 + 5 + 45 ft.
+        assert_eq!(m.cost_to(Pos::new(5, 0)), Some(95));
+        // Squares beside the wall stay usable: no corridor is lost.
+        assert_eq!(m.cost_to(Pos::new(4, 1)), Some(5));
+        let none = HashSet::new();
+        let info = compute_cover(&bf, Pos::new(4, 3), Size::Medium, Pos::new(5, 3), Size::Medium, &none);
+        assert!(!info.line_of_effect, "adjacent creatures across a wall have no line of effect");
+        // Through the gap there is a clear line.
+        let info = compute_cover(&bf, Pos::new(4, 9), Size::Medium, Pos::new(6, 9), Size::Medium, &none);
+        assert!(info.line_of_effect);
+        assert_eq!(info.cover, CoverLevel::None);
+    }
+
+    #[test]
+    fn thin_wall_corners_block_diagonals() {
+        use crate::models::battlefield::Edge;
+        let mut bf = Battlefield::open(4, 4);
+        bf.edges.insert(Edge::east(0, 0));
+        assert!(bf.edge_blocks_step(Pos::new(0, 1), Pos::new(1, 0)));
+        assert!(bf.edge_blocks_step(Pos::new(0, 0), Pos::new(1, 1)));
+        assert!(!bf.edge_blocks_step(Pos::new(0, 2), Pos::new(1, 3)));
+    }
+
+    #[test]
+    fn empty_edges_keep_serialized_form() {
+        let bf = Battlefield::open(2, 2);
+        let json = serde_json::to_string(&bf).unwrap();
+        assert!(!json.contains("edges"), "{json}");
+        let back: Battlefield = serde_json::from_str(&json).unwrap();
+        assert_eq!(back, bf);
     }
 
     #[test]

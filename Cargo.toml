@@ -5,6 +5,8 @@ members = [
     "crates/pf2e-ai",
     "crates/pf2e-store",
     "crates/pf2e-server",
+    "crates/pf2e-bridge",
+    "crates/pf2e-wasm",
 ]
 
 [workspace.package]
@@ -14,7 +16,7 @@ license = "MIT"
 rust-version = "1.80"
 
 [workspace.dependencies]
-serde = { version = "1", features = ["derive"] }
+serde = { version = "1", features = ["derive", "rc"] }
 serde_json = "1"
 thiserror = "2"
 rusqlite = { version = "0.41", features = ["bundled"] }
@@ -25,6 +27,15 @@ uuid = { version = "1", features = ["v4"] }
 pf2e-core = { path = "crates/pf2e-core" }
 pf2e-ai = { path = "crates/pf2e-ai" }
 pf2e-store = { path = "crates/pf2e-store" }
+pf2e-bridge = { path = "crates/pf2e-bridge" }
 
 [profile.release]
 debug = false
+
+# WebAssembly build for the Foundry module (scripts/build-wasm.sh):
+# whole-program optimisation for speed; size is secondary to latency.
+[profile.wasm]
+inherits = "release"
+lto = true
+codegen-units = 1
+opt-level = 3

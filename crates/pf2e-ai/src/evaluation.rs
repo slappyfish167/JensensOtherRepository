@@ -11,10 +11,13 @@
 //! available actions, so the evaluator never hard-codes a condition.
 
 use crate::analysis::{action_factor, engagement_factor, round_damage};
+use crate::keys::{combat_profile, combine, side_context};
 use pf2e_core::combat::{CombatState, Phase};
 use pf2e_core::conditions::ConditionKind as CK;
 use pf2e_core::stats::Side;
+use pf2e_core::CombatantId;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Factor {
@@ -48,6 +51,82 @@ pub struct SideSummary {
 /// so alternative evaluators (learned, scripted) can be swapped in.
 pub trait Evaluator: Send + Sync {
     fn evaluate(&self, state: &CombatState) -> f64;
+
+    /// Same value as [`Evaluator::evaluate`], optionally reusing work across
+    /// calls within one search. Implementations must return *exactly* the
+    /// uncached value; the default ignores the cache.
+    fn evaluate_cached(&self, state: &CombatState, cache: &mut EvalCache) -> f64 {
+        let _ = cache;
+        self.evaluate(state)
+    }
+}
+
+/// Memo of per-pair expected damage, valid for one search (one battlefield
+/// and set of stat blocks). Keys hash every input the expected-damage
+/// helpers read (see `keys::combat_profile`), so a hit is exact.
+#[derive(Debug, Default)]
+pub struct EvalCache {
+    pairs: HashMap<u64, f64>,
+    pub hits: u64,
+    pub misses: u64,
+}
+
+impl EvalCache {
+    /// Entries beyond this are dropped wholesale (bounded memory in wasm).
+    pub const MAX_ENTRIES: usize = 200_000;
+
+    pub fn len(&self) -> usize {
+        self.pairs.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.pairs.is_empty()
+    }
+}
+
+/// Expected round damage of attacker → target, through the cache if any.
+struct PairDamage<'c> {
+    cache: Option<&'c mut EvalCache>,
+    /// Per combatant: (combat profile, context of its side).
+    keys: HashMap<CombatantId, (u64, u64)>,
+}
+
+impl<'c> PairDamage<'c> {
+    fn new(s: &CombatState, cache: Option<&'c mut EvalCache>) -> Self {
+        let keys = if cache.is_some() {
+            let sides: HashMap<Side, u64> =
+                [Side::Party, Side::Enemy, Side::Neutral].into_iter().map(|side| (side, side_context(s, side))).collect();
+            s.combatants.iter().map(|c| (c.id, (combat_profile(c), sides[&c.side]))).collect()
+        } else {
+            HashMap::new()
+        };
+        PairDamage { cache, keys }
+    }
+
+    fn get(&mut self, s: &CombatState, a: CombatantId, f: CombatantId, spells: bool, position: bool) -> f64 {
+        let compute = || {
+            let mut d = round_damage(s, a, f, spells);
+            if position {
+                d *= engagement_factor(s, a, f);
+            }
+            d
+        };
+        let Some(cache) = self.cache.as_deref_mut() else { return compute() };
+        let (pa, side_a) = self.keys[&a];
+        let (pf, _) = self.keys[&f];
+        let key = combine(&[side_a, pa, pf, spells as u64 | (position as u64) << 1]);
+        if let Some(v) = cache.pairs.get(&key) {
+            cache.hits += 1;
+            return *v;
+        }
+        cache.misses += 1;
+        let v = compute();
+        if cache.pairs.len() >= EvalCache::MAX_ENTRIES {
+            cache.pairs.clear();
+        }
+        cache.pairs.insert(key, v);
+        v
+    }
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
@@ -71,6 +150,10 @@ const PERSISTENT_TICKS: f64 = 1.0 / 0.3;
 
 impl HeuristicEvaluator {
     fn sides(&self, s: &CombatState) -> (SideSummary, SideSummary) {
+        self.sides_with(s, &mut PairDamage::new(s, None))
+    }
+
+    fn sides_with(&self, s: &CombatState, pd: &mut PairDamage) -> (SideSummary, SideSummary) {
         let mut out = [SideSummary::default(), SideSummary::default()];
         for (i, side) in [Side::Party, Side::Enemy].into_iter().enumerate() {
             let members: Vec<_> = s.combatants.iter().filter(|c| c.side == side && !c.is_hazard()).collect();
@@ -90,10 +173,7 @@ impl HeuristicEvaluator {
                 let mut total = 0.0;
                 let mut best = 0.0f64;
                 for f in &foes {
-                    let mut d = round_damage(s, c.id, f.id, self.include_spells);
-                    if self.include_position {
-                        d *= engagement_factor(s, c.id, f.id);
-                    }
+                    let d = pd.get(s, c.id, f.id, self.include_spells, self.include_position);
                     total += d;
                     best = best.max(d);
                 }
@@ -106,6 +186,10 @@ impl HeuristicEvaluator {
     }
 
     fn logit_of(&self, s: &CombatState, p: &SideSummary, e: &SideSummary) -> f64 {
+        self.logit_with(s, p, e, &mut PairDamage::new(s, None))
+    }
+
+    fn logit_with(&self, s: &CombatState, p: &SideSummary, e: &SideSummary, pd: &mut PairDamage) -> f64 {
         let (mut hp_p, mut hp_e) = (p.hit_points.max(EPS), e.hit_points.max(EPS));
         if self.include_tempo {
             if let Some(actor) = s.current_actor().and_then(|id| s.combatant(id)) {
@@ -113,7 +197,7 @@ impl HeuristicEvaluator {
                     let remaining = actor.actions_remaining as f64 / 3.0;
                     let foes: Vec<_> = s.combatants.iter().filter(|c| actor.side.is_hostile_to(c.side) && !c.is_down() && !c.is_hazard()).collect();
                     if !foes.is_empty() {
-                        let dmg = foes.iter().map(|f| round_damage(s, actor.id, f.id, self.include_spells)).fold(0.0, f64::max) * remaining;
+                        let dmg = foes.iter().map(|f| pd.get(s, actor.id, f.id, self.include_spells, false)).fold(0.0, f64::max) * remaining;
                         match actor.side {
                             Side::Party => hp_e = (hp_e - dmg * 0.5).max(EPS),
                             Side::Enemy => hp_p = (hp_p - dmg * 0.5).max(EPS),
@@ -217,7 +301,7 @@ impl HeuristicEvaluator {
         }));
         factors.push(counterfactual("Battlefield control", "cover and concealment from terrain", &|s2, _| {
             s2.options.auto_cover = false;
-            for row in &mut s2.battlefield.map {
+            for row in &mut std::sync::Arc::make_mut(&mut s2.battlefield).map {
                 *row = row.replace('%', ".");
             }
         }));
@@ -233,18 +317,28 @@ impl HeuristicEvaluator {
     }
 }
 
-impl Evaluator for HeuristicEvaluator {
-    fn evaluate(&self, s: &CombatState) -> f64 {
+impl HeuristicEvaluator {
+    fn evaluate_with(&self, s: &CombatState, mut pd: PairDamage) -> f64 {
         if let Some(t) = Self::terminal(s) {
             return t;
         }
-        let (p, e) = self.sides(s);
+        let (p, e) = self.sides_with(s, &mut pd);
         if e.standing == 0 && e.down > 0 {
             return 10.0;
         }
         if p.standing == 0 && p.down > 0 {
             return -10.0;
         }
-        self.score_of(self.logit_of(s, &p, &e))
+        self.score_of(self.logit_with(s, &p, &e, &mut pd))
+    }
+}
+
+impl Evaluator for HeuristicEvaluator {
+    fn evaluate(&self, s: &CombatState) -> f64 {
+        self.evaluate_with(s, PairDamage::new(s, None))
+    }
+
+    fn evaluate_cached(&self, s: &CombatState, cache: &mut EvalCache) -> f64 {
+        self.evaluate_with(s, PairDamage::new(s, Some(cache)))
     }
 }

@@ -12,14 +12,16 @@
 
 pub mod analysis;
 pub mod evaluation;
+pub mod explain;
+pub mod keys;
 pub mod movegen;
 pub mod queries;
 pub mod search;
 pub mod simulate;
 
 pub use evaluation::{Evaluation, Evaluator, HeuristicEvaluator};
-pub use search::{best_turn, PlannedTurn, SearchConfig};
-pub use simulate::{simulate, SimulationConfig, SimulationReport};
+pub use search::{best_turn, best_turn_with_budget, Budget, PlannedTurn, SearchConfig, Unlimited};
+pub use simulate::{simulate, simulate_range, SimulationConfig, SimulationReport, SimulationTally};
 
 #[cfg(test)]
 mod tests;

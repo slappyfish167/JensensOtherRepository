@@ -180,3 +180,126 @@ fn spell_ranking_for_a_caster() {
     assert_eq!(strat.focus_target, Some(CombatantId(1)));
     assert!(strat.creatures[0].recommendation.is_some());
 }
+
+// ---------------------------------------------------------------------------
+// Search acceleration, simulation splitting, explanations
+// ---------------------------------------------------------------------------
+
+fn skirmish() -> CombatState {
+    let mut s = state(vec![
+        p(sb("Hero", 40, 18, 10, "1d8+4"), Side::Party, 3, 5),
+        p(sb("Ally", 30, 17, 8, "1d6+3"), Side::Party, 2, 7),
+        p(sb("Orc", 30, 16, 8, "1d8+3"), Side::Enemy, 7, 5),
+        p(sb("Goblin", 18, 15, 7, "1d6+2"), Side::Enemy, 8, 7),
+    ]);
+    start(&mut s, &[20, 15, 5, 1]);
+    s
+}
+
+#[test]
+fn cached_evaluation_is_exact() {
+    use crate::evaluation::EvalCache;
+    use crate::simulate::{play_out, SimulationConfig};
+    // Sample positions along a played-out combat; the cache is shared
+    // across all of them, as it is within one search.
+    let ev = HeuristicEvaluator::default();
+    let mut cache = EvalCache::default();
+    let s0 = skirmish();
+    for run in 0..6 {
+        let cfg = SimulationConfig { runs: 1, seed: run, max_rounds: (run as u32 % 3) + 1 };
+        for s in [s0.clone(), play_out(&s0, &cfg, run as u32)] {
+            for _ in 0..2 {
+                let (plain, cached) = (ev.evaluate(&s), ev.evaluate_cached(&s, &mut cache));
+                assert!((plain - cached).abs() < 1e-12, "cache changed the score: {plain} vs {cached}");
+            }
+        }
+    }
+    assert!(cache.hits > 0);
+}
+
+#[test]
+fn search_accelerations_agree_when_the_beam_does_not_bind() {
+    // With a beam wide enough that nothing is cut, ordering cannot change
+    // the result: transpositions and iterative deepening must agree with a
+    // plain full-depth search.
+    let s = skirmish();
+    let ev = HeuristicEvaluator::default();
+    let wide = SearchConfig { beam: 64, node_budget: 1_000_000, ..Default::default() };
+    let plain = best_turn(&s, &ev, SearchConfig { iterative: false, transpositions: false, ..wide }).unwrap();
+    for (iterative, transpositions) in [(false, true), (true, false), (true, true)] {
+        let fast = best_turn(&s, &ev, SearchConfig { iterative, transpositions, ..wide }).unwrap();
+        assert!((fast.expected_score - plain.expected_score).abs() < 1e-9, "iterative={iterative} tt={transpositions}: {} vs {}", fast.expected_score, plain.expected_score);
+        assert!(!fast.truncated);
+    }
+    let tt = best_turn(&s, &ev, SearchConfig { iterative: false, transpositions: true, ..wide }).unwrap();
+    assert!(tt.nodes <= plain.nodes, "transpositions never add nodes ({} vs {})", tt.nodes, plain.nodes);
+}
+
+#[test]
+fn budget_stops_with_a_complete_shallower_answer() {
+    use crate::search::best_turn_with_budget;
+    let s = skirmish();
+    let ev = HeuristicEvaluator::default();
+    let full = best_turn(&s, &ev, SearchConfig::default()).unwrap();
+    assert_eq!(full.depth, 3);
+    // Allow roughly the first iteration only.
+    let stop_early = |nodes: usize| nodes > 40;
+    let quick = best_turn_with_budget(&s, &ev, SearchConfig::default(), &stop_early).unwrap();
+    assert!(quick.truncated);
+    assert!(quick.depth < full.depth, "depth {}", quick.depth);
+    assert!(!quick.actions.is_empty(), "an anytime answer still recommends something");
+    // An exhausted budget never panics or recommends illegal actions.
+    let none = best_turn_with_budget(&s, &ev, SearchConfig::default(), &|_: usize| true).unwrap();
+    let mut probe = s.clone();
+    for a in &none.actions {
+        probe.apply(&Command::Act { actor: none.actor, action: a.clone() }).expect("legal");
+        while let Some(pi) = probe.pending() {
+            match pi {
+                pf2e_core::combat::PendingInput::Roll(r) => probe.apply(&Command::ProvideRoll { request_id: r.request_id, value: 10, extra_modifier: 0 }).unwrap(),
+                pf2e_core::combat::PendingInput::Decision(d) => probe.apply(&Command::Decide { request_id: d.request_id, accept: false }).unwrap(),
+            };
+        }
+    }
+}
+
+#[test]
+fn split_simulation_merges_exactly() {
+    use crate::simulate::{simulate_range, SimulationTally};
+    let s = skirmish();
+    let cfg = SimulationConfig { runs: 40, seed: 3, max_rounds: 10 };
+    let whole = simulate(&s, cfg);
+    let mut merged = SimulationTally::default();
+    for (start, count) in [(0, 13), (13, 13), (26, 14)] {
+        merged.merge(&simulate_range(&s, cfg, start, count));
+    }
+    assert_eq!(serde_json::to_string(&merged.report()).unwrap(), serde_json::to_string(&whole).unwrap());
+}
+
+#[test]
+fn explain_change_names_the_wounded_enemy() {
+    use crate::explain::{explain_change, ReasonKind};
+    let before = skirmish();
+    let mut after = before.clone();
+    let orc = after.combatants.iter_mut().find(|c| c.name == "Orc").unwrap();
+    orc.hp = 6;
+    let ex = explain_change(&before, &after, &HeuristicEvaluator::default(), 5);
+    assert!(ex.delta > 0.0, "wounding an enemy helps the party ({})", ex.delta);
+    let top = &ex.reasons[0];
+    assert_eq!(top.kind, ReasonKind::HitPoints);
+    assert!(top.text.contains("Orc") && top.impact > 0.0, "{top:?}");
+}
+
+#[test]
+fn explain_position_reports_flanking() {
+    use crate::explain::{explain_position, ReasonKind};
+    let mut s = state(vec![
+        p(sb("Hero", 40, 18, 10, "1d8+4"), Side::Party, 4, 5),
+        p(sb("Ally", 40, 18, 10, "1d8+4"), Side::Party, 6, 5),
+        p(sb("Orc", 30, 16, 8, "1d8+3"), Side::Enemy, 5, 5),
+    ]);
+    start(&mut s, &[20, 15, 1]);
+    let ex = explain_position(&s, &HeuristicEvaluator::default(), 8);
+    let flank = ex.reasons.iter().find(|r| r.kind == ReasonKind::Flanked).expect("flanking reason");
+    assert!(flank.text.contains("Orc"));
+    assert!(flank.impact > 0.0, "the flanked enemy favours the party ({})", flank.impact);
+}

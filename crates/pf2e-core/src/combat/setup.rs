@@ -75,9 +75,9 @@ impl CombatSetup {
         }
         Ok(CombatState {
             schema_version: STATE_SCHEMA_VERSION,
-            battlefield,
+            battlefield: std::sync::Arc::new(battlefield),
             combatants,
-            spells,
+            spells: std::sync::Arc::new(spells),
             phase: Phase::Setup,
             round: 0,
             turn: 0,

@@ -589,7 +589,7 @@ impl CombatState {
     }
 
     /// Converts a rules-text duration into a concrete expiry.
-    pub(crate) fn expiry_for(&self, d: Duration, source: CombatantId, target: CombatantId) -> Option<Expiry> {
+    pub fn expiry_for(&self, d: Duration, source: CombatantId, target: CombatantId) -> Option<Expiry> {
         let next_turn_round = |id: CombatantId| match self.initiative_index(id) {
             Some(i) if i > self.turn => self.round,
             _ => self.round + 1,

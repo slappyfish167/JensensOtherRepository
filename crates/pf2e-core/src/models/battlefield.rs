@@ -1,7 +1,46 @@
-//! The battle map: a rectangular grid of 5-foot squares.
+//! The battle map: a rectangular grid of 5-foot squares, plus optional
+//! *thin walls* on the edges between squares (as drawn in a VTT).
 
 use crate::grid::Pos;
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeSet;
+
+/// Which border of square `(x, y)` an [`Edge`] lies on. Only east and south
+/// are needed: the west border of `(x, y)` is the east border of `(x-1, y)`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum EdgeSide {
+    East,
+    South,
+}
+
+/// A blocked border between two orthogonally adjacent squares.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
+pub struct Edge {
+    pub x: i32,
+    pub y: i32,
+    pub side: EdgeSide,
+}
+
+impl Edge {
+    pub const fn east(x: i32, y: i32) -> Self {
+        Edge { x, y, side: EdgeSide::East }
+    }
+    pub const fn south(x: i32, y: i32) -> Self {
+        Edge { x, y, side: EdgeSide::South }
+    }
+
+    /// The edge shared by two orthogonally adjacent squares.
+    pub fn between(a: Pos, b: Pos) -> Option<Edge> {
+        match (b.x - a.x, b.y - a.y) {
+            (1, 0) => Some(Edge::east(a.x, a.y)),
+            (-1, 0) => Some(Edge::east(b.x, b.y)),
+            (0, 1) => Some(Edge::south(a.x, a.y)),
+            (0, -1) => Some(Edge::south(b.x, b.y)),
+            _ => None,
+        }
+    }
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -57,6 +96,12 @@ pub struct Battlefield {
     pub map: Vec<String>,
     #[serde(default)]
     pub notes: String,
+    /// Thin walls between squares. They block movement and line of effect
+    /// exactly like a wall square, but occupy no space. Omitted from the
+    /// serialized form when empty, so maps without them (and the
+    /// fingerprints of stored combats) are unchanged.
+    #[serde(default, skip_serializing_if = "BTreeSet::is_empty")]
+    pub edges: BTreeSet<Edge>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
@@ -69,6 +114,8 @@ pub enum BattlefieldError {
     Glyph { glyph: char, x: usize, y: usize },
     #[error("battlefield must be between 1x1 and 200x200")]
     Size,
+    #[error("wall edge at ({x},{y}) lies outside the map")]
+    EdgeOutOfBounds { x: i32, y: i32 },
 }
 
 impl Battlefield {
@@ -78,6 +125,7 @@ impl Battlefield {
             height,
             map: (0..height).map(|_| ".".repeat(width as usize)).collect(),
             notes: String::new(),
+            edges: BTreeSet::new(),
         }
     }
 
@@ -99,7 +147,34 @@ impl Battlefield {
                 }
             }
         }
+        if let Some(e) = self.edges.iter().find(|e| !self.in_bounds(Pos::new(e.x, e.y))) {
+            return Err(BattlefieldError::EdgeOutOfBounds { x: e.x, y: e.y });
+        }
         Ok(())
+    }
+
+    pub fn has_edge(&self, e: Edge) -> bool {
+        !self.edges.is_empty() && self.edges.contains(&e)
+    }
+
+    /// Whether a single-square step from `from` to the neighbouring square
+    /// `to` crosses a thin wall. Diagonal steps are blocked by any wall edge
+    /// touching the shared corner (no squeezing through wall corners, the
+    /// same rule the engine applies to wall squares).
+    pub fn edge_blocks_step(&self, from: Pos, to: Pos) -> bool {
+        if self.edges.is_empty() {
+            return false;
+        }
+        let (dx, dy) = (to.x - from.x, to.y - from.y);
+        if dx == 0 || dy == 0 {
+            return Edge::between(from, to).map(|e| self.edges.contains(&e)).unwrap_or(false);
+        }
+        let side_x = Pos::new(to.x, from.y);
+        let side_y = Pos::new(from.x, to.y);
+        [(from, side_x), (from, side_y), (side_x, to), (side_y, to)]
+            .into_iter()
+            .filter_map(|(a, b)| Edge::between(a, b))
+            .any(|e| self.edges.contains(&e))
     }
 
     pub fn in_bounds(&self, p: Pos) -> bool {
@@ -111,11 +186,12 @@ impl Battlefield {
         if !self.in_bounds(p) {
             return Terrain::Wall;
         }
-        self.map
-            .get(p.y as usize)
-            .and_then(|row| row.chars().nth(p.x as usize))
-            .and_then(Terrain::from_glyph)
-            .unwrap_or(Terrain::Wall)
+        let Some(row) = self.map.get(p.y as usize) else { return Terrain::Wall };
+        // Every terrain glyph is ASCII, so a byte index is the square
+        // (O(1); this is the pathfinder's and cover sampler's hot path).
+        // Non-ASCII rows only exist in unvalidated maps: fall back to chars.
+        let glyph = if row.is_ascii() { row.as_bytes().get(p.x as usize).map(|b| *b as char) } else { row.chars().nth(p.x as usize) };
+        glyph.and_then(Terrain::from_glyph).unwrap_or(Terrain::Wall)
     }
 
     pub fn set_terrain(&mut self, p: Pos, t: Terrain) {

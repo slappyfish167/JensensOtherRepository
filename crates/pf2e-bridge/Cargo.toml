@@ -1,0 +1,13 @@
+[package]
+name = "pf2e-bridge"
+description = "VTT bridge: converts a Foundry VTT combat snapshot into a pf2e-core CombatState and answers analysis requests as JSON. Pure Rust (no I/O), so it runs natively and in WebAssembly."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+pf2e-core.workspace = true
+pf2e-ai.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true

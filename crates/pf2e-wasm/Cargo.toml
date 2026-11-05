@@ -1,0 +1,15 @@
+[package]
+name = "pf2e-wasm"
+description = "WebAssembly build of the PF2e engine + analysis for the Foundry VTT module (wasm-bindgen)."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+pf2e-bridge.workspace = true
+pf2e-ai.workspace = true
+# Must equal the wasm-bindgen CLI version used by scripts/build-wasm.sh.
+wasm-bindgen = "=0.2.130"

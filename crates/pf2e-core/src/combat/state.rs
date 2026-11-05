@@ -12,6 +12,7 @@ use crate::models::statblock::Statblock;
 use crate::stats::Side;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, VecDeque};
+use std::sync::Arc;
 
 use super::pending::Step;
 
@@ -48,7 +49,9 @@ pub struct Combatant {
     pub name: String,
     pub side: Side,
     pub kind: CombatantKind,
-    pub statblock: Statblock,
+    /// Immutable during a combat; shared so cloning a state (which the
+    /// search does per node) is cheap. Serializes exactly like `Statblock`.
+    pub statblock: Arc<Statblock>,
     pub hp: i32,
     #[serde(default)]
     pub temp_hp: i32,
@@ -104,7 +107,7 @@ impl Combatant {
             spell_slots: sb.spellcasting.iter().map(|e| e.slots.clone()).collect(),
             life: LifeState::Active,
             in_initiative,
-            statblock: sb,
+            statblock: Arc::new(sb),
         }
     }
 
@@ -186,10 +189,12 @@ impl Default for RulesOptions {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CombatState {
     pub schema_version: u32,
-    pub battlefield: Battlefield,
+    /// Shared and copy-on-write (`Arc::make_mut`): the map never changes in
+    /// play, and sharing makes state clones cheap. Same serialized form.
+    pub battlefield: Arc<Battlefield>,
     pub combatants: Vec<Combatant>,
     #[serde(default)]
-    pub spells: BTreeMap<String, Spell>,
+    pub spells: Arc<BTreeMap<String, Spell>>,
     pub phase: Phase,
     pub round: u32,
     /// Index into `initiative` of the creature whose turn it is.

@@ -414,6 +414,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "pf2e-bridge"
+version = "0.1.0"
+dependencies = [
+ "pf2e-ai",
+ "pf2e-core",
+ "serde",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
 name = "pf2e-core"
 version = "0.1.0"
 dependencies = [
@@ -449,6 +460,15 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror",
+]
+
+[[package]]
+name = "pf2e-wasm"
+version = "0.1.0"
+dependencies = [
+ "pf2e-ai",
+ "pf2e-bridge",
+ "wasm-bindgen",
 ]
 
 [[package]]

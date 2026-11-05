@@ -53,6 +53,12 @@ impl CombatState {
 
     /// Validates an action for `actor` (whose turn it must be) and returns its cost.
     pub fn check_action(&self, actor: CombatantId, action: &Action) -> CombatResult<u8> {
+        self.check_action_with(actor, action, None)
+    }
+
+    /// [`CombatState::check_action`] reusing an already computed movement
+    /// map for the actor (Stride validation is a pathfinding query).
+    fn check_action_with(&self, actor: CombatantId, action: &Action, movement: Option<&MoveMap>) -> CombatResult<u8> {
         self.ensure_can_declare(actor)?;
         let a = self.c(actor);
         if !a.can_act() {
@@ -98,7 +104,11 @@ impl CombatState {
                 if a.conditions.has(CK::Prone) {
                     return illegal("prone creatures must Stand (or Crawl) first");
                 }
-                if self.movement(actor).cost_to(*to).is_none() {
+                let reachable = match movement {
+                    Some(mm) => mm.cost_to(*to).is_some(),
+                    None => self.movement(actor).cost_to(*to).is_some(),
+                };
+                if !reachable {
                     return illegal(format!("cannot reach ({}, {}) with a Stride", to.x, to.y));
                 }
             }
@@ -271,7 +281,9 @@ impl CombatState {
 
     /// Declares (and starts resolving) an action. Assumes `ensure_can_declare`.
     pub(crate) fn declare_action(&mut self, actor: CombatantId, action: &Action, ev: &mut Vec<Event>) -> CombatResult<()> {
-        let cost = self.check_action(actor, action)?;
+        // One pathfinding pass serves both Stride validation and its path.
+        let stride_map = matches!(action, Action::Stride { .. }).then(|| self.movement(actor));
+        let cost = self.check_action_with(actor, action, stride_map.as_ref())?;
         let tag = self.alloc_tag();
         self.cm(actor).actions_remaining -= cost;
         ev.push(Event::ActionDeclared { actor, action: action.name().to_string(), cost });
@@ -305,7 +317,9 @@ impl CombatState {
                 self.push_front_all(steps);
             }
             Action::Stride { to } => {
-                let path = self.movement(actor).path_to(*to).unwrap_or_default();
+                // Movement depends on positions and conditions only, which
+                // nothing above has changed since `stride_map` was computed.
+                let path = stride_map.as_ref().and_then(|mm| mm.path_to(*to)).unwrap_or_default();
                 self.cm(actor).effects.retain(|e| !e.tags.contains(&EffectTag::TakingCover));
                 self.queue.push_front(Step::ContinueMove { tag, mover: actor, kind: MoveKind::Stride, remaining: path, offered: vec![] });
             }
