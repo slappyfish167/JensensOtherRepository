@@ -26,9 +26,9 @@
     {"source": {"kind": "character", "value": "sample-rogue"},   "side": "party", "position": {"x": 2, "y": 7}},
     {"source": {"kind": "character", "value": "sample-cleric"},  "side": "party", "position": {"x": 1, "y": 6}},
     {"source": {"kind": "character", "value": "sample-wizard"},  "side": "party", "position": {"x": 1, "y": 8}},
-    {"source": {"kind": "monster", "value": "bone-sentinel"}, "side": "enemy", "position": {"x": 10, "y": 5}},
-    {"source": {"kind": "monster", "value": "bone-sentinel"}, "side": "enemy", "position": {"x": 10, "y": 8}},
-    {"source": {"kind": "monster", "value": "cult-adept"},    "side": "enemy", "position": {"x": 13, "y": 6}},
+    {"source": {"kind": "monster", "value": "bone-sentinel"}, "side": "enemy", "position": {"x": 10, "y": 6}},
+    {"source": {"kind": "monster", "value": "goblin-cutter"}, "side": "enemy", "position": {"x": 12, "y": 3}},
+    {"source": {"kind": "monster", "value": "goblin-cutter"}, "side": "enemy", "position": {"x": 12, "y": 9}},
     {"source": {"kind": "monster", "value": "spiked-pit"},    "side": "enemy", "position": {"x": 8, "y": 4}, "name": "Hidden Spiked Pit"}
   ]
 }

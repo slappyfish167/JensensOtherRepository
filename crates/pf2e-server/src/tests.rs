@@ -77,12 +77,13 @@ async fn full_combat_flow_with_replay_and_undo() {
     let (s, b) = call(&r, "GET", "/api/encounters/sample-crypt-ambush/budget", None).await;
     assert_eq!(s, StatusCode::OK, "{b}");
     assert_eq!(b["party_size"], 4);
+    assert_eq!(b["threat"], "moderate", "{b}");
 
     let (s, view) = call(&r, "POST", "/api/combats", Some(json!({"encounter_id": "sample-crypt-ambush", "dice": {"mode": "seeded", "seed": 7}}))).await;
     assert_eq!(s, StatusCode::OK, "{view}");
     let id = view["id"].as_str().unwrap().to_string();
     let names: Vec<_> = view["state"]["combatants"].as_array().unwrap().iter().map(|c| c["name"].as_str().unwrap().to_string()).collect();
-    assert!(names.contains(&"Bone Sentinel 1".to_string()) && names.contains(&"Bone Sentinel 2".to_string()));
+    assert!(names.contains(&"Goblin Cutter 1".to_string()) && names.contains(&"Goblin Cutter 2".to_string()));
 
     let (s, v) = call(&r, "POST", &format!("/api/combats/{id}/commands"), Some(json!({"type": "start_combat"}))).await;
     assert_eq!(s, StatusCode::OK, "{v}");
