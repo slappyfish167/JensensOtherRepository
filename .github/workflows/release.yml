@@ -1,35 +1,77 @@
 name: Release Foundry module
 
+# Publishes foundry/dist/module.json + pf2e-stockfish.zip as a GitHub release
+# tagged v<module.json version>. Runs when:
+#   * a v* tag is pushed, or
+#   * module.json (version bump) or this workflow changes on the release
+#     branch — the workflow then creates the tag itself.
+# A version that already has a release is skipped, so re-runs are harmless.
+
 on:
   push:
     tags: ['v*']
+    branches: ['claude/serene-gauss-hcult4']
+    paths: ['foundry/module.json', '.github/workflows/release.yml']
+  workflow_dispatch:
 
 permissions:
   contents: write
 
+concurrency:
+  group: release
+  cancel-in-progress: false
+
 jobs:
   release:
     runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - name: Version
+        id: v
+        run: |
+          VERSION="$(jq -r .version foundry/module.json)"
+          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+          if [[ "$GITHUB_REF_TYPE" == "tag" && "$GITHUB_REF_NAME" != "v$VERSION" ]]; then
+            echo "Tag $GITHUB_REF_NAME does not match module.json version $VERSION" >&2; exit 1
+          fi
+          if gh release view "v$VERSION" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release v$VERSION already exists; nothing to do."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.v.outputs.skip != 'true'
+        uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-unknown-unknown
-      - name: wasm-bindgen CLI (pinned)
+      - if: steps.v.outputs.skip != 'true'
+        name: wasm-bindgen CLI (pinned)
         run: cargo install wasm-bindgen-cli --version 0.2.130 --locked
-      - run: scripts/build-wasm.sh
-      - uses: actions/setup-node@v4
+      - if: steps.v.outputs.skip != 'true'
+        run: scripts/build-wasm.sh
+      - if: steps.v.outputs.skip != 'true'
+        uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Check tag matches module version
-        run: test "v$(node -p "require('./foundry/module.json').version")" = "${GITHUB_REF_NAME}"
-      - working-directory: foundry
+      - if: steps.v.outputs.skip != 'true'
+        working-directory: foundry
         run: |
           npm ci
           npm test
           npm run package
-      - uses: softprops/action-gh-release@v2
+      - if: steps.v.outputs.skip != 'true'
+        uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ steps.v.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          name: PF2e Stockfish ${{ steps.v.outputs.tag }}
+          make_latest: true
+          body: |
+            Install in Foundry (Add-on Modules → Install Module → Manifest URL):
+            https://github.com/${{ github.repository }}/releases/latest/download/module.json
+
+            Requires Foundry VTT v13 and the Pathfinder Second Edition system 7.x.
+            Early test release: not yet verified in a live Foundry world.
           files: |
             foundry/dist/module.json
             foundry/dist/pf2e-stockfish.zip
