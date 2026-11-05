@@ -1,0 +1,26 @@
+<div class="sf-report sf-best-turn">
+  <header class="sf-head">
+    <h3>{{name}}</h3>
+    {{#if hypothetical}}<span class="sf-tag" data-tooltip="PF2E_STOCKFISH.BestTurn.hypotheticalHint">{{localize "PF2E_STOCKFISH.BestTurn.hypothetical"}}</span>{{/if}}
+  </header>
+  {{#if empty}}
+    <p class="sf-empty">{{localize "PF2E_STOCKFISH.BestTurn.endTurn"}}</p>
+  {{else}}
+    <ol class="sf-steps">
+      {{#each steps}}<li><i class="{{icon}}"></i><span>{{label}}</span></li>{{/each}}
+    </ol>
+  {{/if}}
+  <dl class="sf-value">
+    <dt>{{localize "PF2E_STOCKFISH.BestTurn.expected"}}</dt><dd class="{{gainClass}}">{{gain}}</dd>
+    <dt>{{localize "PF2E_STOCKFISH.BestTurn.evaluation"}}</dt><dd>{{before}} → {{after}}</dd>
+  </dl>
+  {{#if reasoning.length}}
+    <h4>{{localize "PF2E_STOCKFISH.BestTurn.reasoning"}}</h4>
+    <ul class="sf-reasons">{{#each reasoning}}<li>{{this}}</li>{{/each}}</ul>
+  {{/if}}
+  <footer class="sf-foot">
+    <span class="sf-muted">{{searchNote}}</span>
+    <button type="button" data-action="showOnMap" data-token="{{tokenId}}"><i class="fa-solid fa-map-location-dot"></i> {{localize "PF2E_STOCKFISH.Buttons.showOnMap"}}</button>
+    <button type="button" data-action="rerun"><i class="fa-solid fa-rotate"></i></button>
+  </footer>
+</div>

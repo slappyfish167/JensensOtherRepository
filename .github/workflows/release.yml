@@ -1,0 +1,35 @@
+name: Release Foundry module
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - name: wasm-bindgen CLI (pinned)
+        run: cargo install wasm-bindgen-cli --version 0.2.130 --locked
+      - run: scripts/build-wasm.sh
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check tag matches module version
+        run: test "v$(node -p "require('./foundry/module.json').version")" = "${GITHUB_REF_NAME}"
+      - working-directory: foundry
+        run: |
+          npm ci
+          npm test
+          npm run package
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            foundry/dist/module.json
+            foundry/dist/pf2e-stockfish.zip

@@ -4,6 +4,9 @@ on:
   push:
   pull_request:
 
+env:
+  WASM_BINDGEN_VERSION: 0.2.130
+
 jobs:
   rust:
     runs-on: ubuntu-latest
@@ -12,9 +15,16 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
+          targets: wasm32-unknown-unknown
       - uses: Swatinem/rust-cache@v2
       - run: cargo clippy --workspace --all-targets -- -D warnings
       - run: cargo test --workspace
+      - name: WebAssembly build
+        run: cargo build -p pf2e-wasm --target wasm32-unknown-unknown --profile wasm
+      - name: Snapshot fixture is current
+        run: |
+          PF2E_WRITE_FIXTURE=1 cargo test -p pf2e-bridge write_fixture
+          git diff --exit-code foundry/test/fixtures/
 
   frontend:
     runs-on: ubuntu-latest
@@ -32,3 +42,32 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npx vite build
+
+  foundry:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+      - name: wasm-bindgen CLI (pinned; cached by rust-cache)
+        run: wasm-bindgen --version 2>/dev/null | grep -q "$WASM_BINDGEN_VERSION" || cargo install wasm-bindgen-cli --version "$WASM_BINDGEN_VERSION" --locked
+      - run: scripts/build-wasm.sh
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: foundry/package-lock.json
+      - working-directory: foundry
+        run: |
+          npm ci
+          npm run typecheck
+          npm test
+          npm run build
+      - name: Browser smoke test (built bundle in Chromium)
+        working-directory: foundry
+        run: |
+          npm install --no-save playwright@1.49.1
+          npx playwright install --with-deps chromium
+          npm run smoke

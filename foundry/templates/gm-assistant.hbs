@@ -1,0 +1,27 @@
+<div class="sf-report sf-gm">
+  {{#if focusName}}<p class="sf-focus"><i class="fa-solid fa-crosshairs"></i> {{localize "PF2E_STOCKFISH.Gm.focus"}}: <strong>{{focusName}}</strong></p>{{/if}}
+  {{#each notes}}<p class="sf-muted">{{this}}</p>{{/each}}
+  {{#each creatures}}
+    <section class="sf-creature">
+      <header class="sf-head">
+        <h3><a data-action="selectToken" data-token="{{tokenId}}">{{name}}</a></h3>
+        {{#if plan}}<span class="{{plan.gainClass}}">{{plan.gain}}</span>{{/if}}
+      </header>
+      {{#if plan}}
+        {{#if plan.empty}}<p class="sf-empty">{{localize "PF2E_STOCKFISH.BestTurn.endTurn"}}</p>{{else}}
+        <ol class="sf-steps">{{#each plan.steps}}<li><i class="{{icon}}"></i><span>{{label}}</span></li>{{/each}}</ol>{{/if}}
+        {{#if plan.reasoning.length}}<ul class="sf-reasons">{{#each plan.reasoning}}<li>{{this}}</li>{{/each}}</ul>{{/if}}
+        <button type="button" data-action="showOnMap" data-token="{{tokenId}}"><i class="fa-solid fa-map-location-dot"></i> {{localize "PF2E_STOCKFISH.Buttons.showOnMap"}}</button>
+      {{else}}
+        <p class="sf-empty">{{localize "PF2E_STOCKFISH.Gm.cannotAct"}}</p>
+      {{/if}}
+      {{#if targets.length}}
+        <table class="sf-table">
+          <thead><tr><th>{{localize "PF2E_STOCKFISH.Gm.target"}}</th><th>{{localize "PF2E_STOCKFISH.Gm.damage"}}</th><th>{{localize "PF2E_STOCKFISH.Gm.drop"}}</th></tr></thead>
+          <tbody>{{#each targets}}<tr data-tooltip="{{rationale}}"><td>{{name}}</td><td>{{damage}}</td><td>{{kill}}</td></tr>{{/each}}</tbody>
+        </table>
+      {{/if}}
+    </section>
+  {{/each}}
+  <footer class="sf-foot"><button type="button" data-action="clearMap"><i class="fa-solid fa-eraser"></i></button><button type="button" data-action="rerun"><i class="fa-solid fa-rotate"></i></button></footer>
+</div>

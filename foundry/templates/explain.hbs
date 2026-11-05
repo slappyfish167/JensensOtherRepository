@@ -1,0 +1,14 @@
+<div class="sf-report sf-explain">
+  <header class="sf-head">
+    <h3>{{score}}</h3>
+    {{#if change}}<span class="{{change.cls}}">{{change.from}} → {{score}} ({{change.delta}})</span>{{/if}}
+  </header>
+  {{#if reasons.length}}
+    <ol class="sf-reasons ranked">{{#each reasons}}<li><span class="impact {{cls}}">{{impact}}</span> {{text}}</li>{{/each}}</ol>
+  {{else}}
+    <p class="sf-empty">{{localize "PF2E_STOCKFISH.Explain.none"}}</p>
+  {{/if}}
+  <h4>{{localize "PF2E_STOCKFISH.Explain.factors"}}</h4>
+  <table class="sf-table"><tbody>{{#each factors}}<tr><td>{{name}}</td><td class="{{cls}}">{{value}}</td><td class="sf-muted">{{moved}}</td></tr>{{/each}}</tbody></table>
+  <footer class="sf-foot"><button type="button" data-action="rerun"><i class="fa-solid fa-rotate"></i></button></footer>
+</div>

@@ -1,0 +1,94 @@
+{
+  "PF2E_STOCKFISH": {
+    "Settings": {
+      "evalBarVisibility": {
+        "Name": "Evaluation bar visibility",
+        "Hint": "Who sees the evaluation bar. Showing it to players reveals how the fight is going.",
+        "gm": "GM only",
+        "all": "Everyone",
+        "none": "Nobody"
+      },
+      "playerBestTurn": { "Name": "Players may analyze their own turns", "Hint": "Players can run Best Turn for tokens they own. Their analysis only uses creatures they can see." },
+      "gmAuthoritative": { "Name": "GM-authoritative evaluation", "Hint": "When the bar is shown to players, they receive the GM's score instead of analyzing locally, so hidden creatures never influence what they see." },
+      "forecastRuns": { "Name": "Forecast simulations", "Hint": "Simulated fights per threat forecast. More runs are more precise and slower." },
+      "countMovesAsStride": { "Name": "Count token moves as Stride", "Hint": "Each move of the current combatant's token spends one action in the turn tracker." },
+      "flanking": { "Name": "Flanking", "Hint": "Analyze with the flanking rule." },
+      "autoCover": { "Name": "Automatic cover", "Hint": "Compute cover from walls and creatures." },
+      "cropMargin": { "Name": "Analysis margin (squares)", "Hint": "Map kept around the combatants when building the analysis board." },
+      "searchMs": { "Name": "Best Turn time limit (ms)", "Hint": "The search returns its best fully analyzed answer when the time runs out." },
+      "monsterSearchMs": { "Name": "GM assistant time per creature (ms)", "Hint": "Time limit for each monster's plan." },
+      "forecastWorkers": { "Name": "Forecast workers", "Hint": "Background threads used by the threat forecast (0 shares the main analysis worker)." },
+      "autoAnalyze": { "Name": "Analyze automatically", "Hint": "Re-evaluate whenever the combat changes." },
+      "evalBarSide": { "Name": "Evaluation bar side", "Hint": "Which side of the screen shows the bar.", "left": "Left", "right": "Right" }
+    },
+    "Bar": { "idle": "No combat to analyze" },
+    "Buttons": {
+      "bestTurn": "Analyze Best Turn",
+      "bestTurnShort": "Best Turn",
+      "monsterTurn": "Suggest Monster Turn",
+      "showOnMap": "Show on map"
+    },
+    "Controls": {
+      "group": "Tactical analysis",
+      "evalBar": "Evaluation bar",
+      "bestTurn": "Analyze Best Turn",
+      "monsterTurn": "Suggest Monster Turn",
+      "forecast": "Threat forecast",
+      "explain": "Explain position"
+    },
+    "Windows": {
+      "bestTurn": "Best Turn",
+      "gmAssistant": "Monster Turn Assistant",
+      "forecast": "Threat Forecast",
+      "explain": "Explain Position"
+    },
+    "BestTurn": {
+      "hypothetical": "hypothetical",
+      "hypotheticalHint": "Not this creature's turn: analyzed as if its turn started now.",
+      "endTurn": "No action improves the position. End the turn.",
+      "expected": "Expected value",
+      "evaluation": "Evaluation",
+      "reasoning": "Reasoning"
+    },
+    "Gm": { "focus": "Focus fire", "cannotAct": "Cannot act right now.", "target": "Target", "damage": "Dmg", "drop": "Drop" },
+    "Forecast": {
+      "runs": "simulated fights",
+      "rounds": "avg. rounds",
+      "party": "Party",
+      "enemies": "Enemies",
+      "down": "Down",
+      "dead": "Dead",
+      "disclaimer": "Simulations use a simple tactical policy for every creature and seeded dice. They estimate the odds; they do not predict your table."
+    },
+    "Explain": { "none": "Nothing notable changed.", "factors": "Factors" },
+    "Tracker": { "actions": "Actions used this turn", "attacks": "Attacks this turn (multiple attack penalty)" },
+    "Keys": {
+      "bestTurn": "Analyze Best Turn (selected token)",
+      "monsterTurn": "Suggest Monster Turn",
+      "forecast": "Threat forecast",
+      "explain": "Explain position",
+      "toggleBar": "Toggle evaluation bar"
+    },
+    "Notify": {
+      "selectToken": "Select a token to analyze.",
+      "noTokenOnScene": "This actor has no token on the current scene.",
+      "forecasting": "Simulating the fight…",
+      "starting": "PF2e Stockfish is still starting."
+    },
+    "Errors": {
+      "not_permitted": "You do not have permission for this analysis.",
+      "unsupported_scene": "This scene cannot be analyzed.",
+      "unsupported_version": "The analysis engine and module versions do not match.",
+      "invalid_snapshot": "The combat could not be read.",
+      "nothing_to_analyse": "There is nothing to analyze on this scene.",
+      "unknown_token": "That token is not part of the analysis.",
+      "cannot_act": "That creature cannot act right now.",
+      "timeout": "The analysis took too long and was stopped.",
+      "worker_unavailable": "The analysis engine is unavailable.",
+      "internal": "The analysis engine hit an internal error and was restarted.",
+      "wrongSystem": "PF2e Stockfish requires the Pathfinder Second Edition system.",
+      "workerFailed": "PF2e Stockfish could not start its analysis engine: {error}",
+      "versionMismatch": "PF2e Stockfish engine version {version} does not match this module. Reinstall the module."
+    }
+  }
+}

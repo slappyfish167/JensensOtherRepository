@@ -1,0 +1,1411 @@
+{
+  "version": 1,
+  "scene": {
+    "id": "scene-crypt",
+    "name": "# wall, ~ rubble (difficult), % incense ",
+    "grid": "square",
+    "grid_size_px": 100.0,
+    "grid_distance_ft": 5.0,
+    "origin_px": [
+      0.0,
+      0.0
+    ],
+    "width": 16,
+    "height": 12,
+    "walls": [],
+    "terrain": [
+      {
+        "x": 0,
+        "y": 0,
+        "kind": "wall"
+      },
+      {
+        "x": 1,
+        "y": 0,
+        "kind": "wall"
+      },
+      {
+        "x": 2,
+        "y": 0,
+        "kind": "wall"
+      },
+      {
+        "x": 3,
+        "y": 0,
+        "kind": "wall"
+      },
+      {
+        "x": 4,
+        "y": 0,
+        "kind": "wall"
+      },
+      {
+        "x": 5,
+        "y": 0,
+        "kind": "wall"
+      },
+      {
+        "x": 6,
+        "y": 0,
+        "kind": "wall"
+      },
+      {
+        "x": 7,
+        "y": 0,
+        "kind": "wall"
+      },
+      {
+        "x": 8,
+        "y": 0,
+        "kind": "wall"
+      },
+      {
+        "x": 9,
+        "y": 0,
+        "kind": "wall"
+      },
+      {
+        "x": 10,
+        "y": 0,
+        "kind": "wall"
+      },
+      {
+        "x": 11,
+        "y": 0,
+        "kind": "wall"
+      },
+      {
+        "x": 12,
+        "y": 0,
+        "kind": "wall"
+      },
+      {
+        "x": 13,
+        "y": 0,
+        "kind": "wall"
+      },
+      {
+        "x": 14,
+        "y": 0,
+        "kind": "wall"
+      },
+      {
+        "x": 15,
+        "y": 0,
+        "kind": "wall"
+      },
+      {
+        "x": 0,
+        "y": 1,
+        "kind": "wall"
+      },
+      {
+        "x": 15,
+        "y": 1,
+        "kind": "wall"
+      },
+      {
+        "x": 0,
+        "y": 2,
+        "kind": "wall"
+      },
+      {
+        "x": 3,
+        "y": 2,
+        "kind": "wall"
+      },
+      {
+        "x": 4,
+        "y": 2,
+        "kind": "wall"
+      },
+      {
+        "x": 11,
+        "y": 2,
+        "kind": "obscured"
+      },
+      {
+        "x": 12,
+        "y": 2,
+        "kind": "obscured"
+      },
+      {
+        "x": 15,
+        "y": 2,
+        "kind": "wall"
+      },
+      {
+        "x": 0,
+        "y": 3,
+        "kind": "wall"
+      },
+      {
+        "x": 3,
+        "y": 3,
+        "kind": "wall"
+      },
+      {
+        "x": 4,
+        "y": 3,
+        "kind": "wall"
+      },
+      {
+        "x": 11,
+        "y": 3,
+        "kind": "obscured"
+      },
+      {
+        "x": 12,
+        "y": 3,
+        "kind": "obscured"
+      },
+      {
+        "x": 15,
+        "y": 3,
+        "kind": "wall"
+      },
+      {
+        "x": 0,
+        "y": 4,
+        "kind": "wall"
+      },
+      {
+        "x": 15,
+        "y": 4,
+        "kind": "wall"
+      },
+      {
+        "x": 0,
+        "y": 5,
+        "kind": "wall"
+      },
+      {
+        "x": 6,
+        "y": 5,
+        "kind": "difficult"
+      },
+      {
+        "x": 7,
+        "y": 5,
+        "kind": "difficult"
+      },
+      {
+        "x": 8,
+        "y": 5,
+        "kind": "difficult"
+      },
+      {
+        "x": 15,
+        "y": 5,
+        "kind": "wall"
+      },
+      {
+        "x": 0,
+        "y": 6,
+        "kind": "wall"
+      },
+      {
+        "x": 6,
+        "y": 6,
+        "kind": "difficult"
+      },
+      {
+        "x": 7,
+        "y": 6,
+        "kind": "difficult"
+      },
+      {
+        "x": 8,
+        "y": 6,
+        "kind": "difficult"
+      },
+      {
+        "x": 15,
+        "y": 6,
+        "kind": "wall"
+      },
+      {
+        "x": 0,
+        "y": 7,
+        "kind": "wall"
+      },
+      {
+        "x": 15,
+        "y": 7,
+        "kind": "wall"
+      },
+      {
+        "x": 0,
+        "y": 8,
+        "kind": "wall"
+      },
+      {
+        "x": 4,
+        "y": 8,
+        "kind": "wall"
+      },
+      {
+        "x": 5,
+        "y": 8,
+        "kind": "wall"
+      },
+      {
+        "x": 15,
+        "y": 8,
+        "kind": "wall"
+      },
+      {
+        "x": 0,
+        "y": 9,
+        "kind": "wall"
+      },
+      {
+        "x": 4,
+        "y": 9,
+        "kind": "wall"
+      },
+      {
+        "x": 5,
+        "y": 9,
+        "kind": "wall"
+      },
+      {
+        "x": 15,
+        "y": 9,
+        "kind": "wall"
+      },
+      {
+        "x": 0,
+        "y": 10,
+        "kind": "wall"
+      },
+      {
+        "x": 15,
+        "y": 10,
+        "kind": "wall"
+      },
+      {
+        "x": 0,
+        "y": 11,
+        "kind": "wall"
+      },
+      {
+        "x": 1,
+        "y": 11,
+        "kind": "wall"
+      },
+      {
+        "x": 2,
+        "y": 11,
+        "kind": "wall"
+      },
+      {
+        "x": 3,
+        "y": 11,
+        "kind": "wall"
+      },
+      {
+        "x": 4,
+        "y": 11,
+        "kind": "wall"
+      },
+      {
+        "x": 5,
+        "y": 11,
+        "kind": "wall"
+      },
+      {
+        "x": 6,
+        "y": 11,
+        "kind": "wall"
+      },
+      {
+        "x": 7,
+        "y": 11,
+        "kind": "wall"
+      },
+      {
+        "x": 8,
+        "y": 11,
+        "kind": "wall"
+      },
+      {
+        "x": 9,
+        "y": 11,
+        "kind": "wall"
+      },
+      {
+        "x": 10,
+        "y": 11,
+        "kind": "wall"
+      },
+      {
+        "x": 11,
+        "y": 11,
+        "kind": "wall"
+      },
+      {
+        "x": 12,
+        "y": 11,
+        "kind": "wall"
+      },
+      {
+        "x": 13,
+        "y": 11,
+        "kind": "wall"
+      },
+      {
+        "x": 14,
+        "y": 11,
+        "kind": "wall"
+      },
+      {
+        "x": 15,
+        "y": 11,
+        "kind": "wall"
+      }
+    ]
+  },
+  "combatants": [
+    {
+      "token_id": "tok01",
+      "actor_id": "act01",
+      "name": "Kira Ironhand 1",
+      "kind": "character",
+      "side": "party",
+      "x": 2,
+      "y": 5,
+      "level": 1,
+      "size": "medium",
+      "traits": [
+        "human",
+        "humanoid"
+      ],
+      "hp": 20,
+      "max_hp": 20,
+      "temp_hp": 0,
+      "ac": 18,
+      "fortitude": 7,
+      "reflex": 7,
+      "will": 4,
+      "perception": 6,
+      "speed": 25,
+      "attributes": {
+        "strength": 4,
+        "dexterity": 2,
+        "constitution": 2,
+        "intelligence": 0,
+        "wisdom": 1,
+        "charisma": 0
+      },
+      "skills": {
+        "acrobatics": 5,
+        "arcana": 0,
+        "athletics": 7,
+        "crafting": 0,
+        "deception": 0,
+        "diplomacy": 0,
+        "intimidation": 3,
+        "medicine": 1,
+        "nature": 1,
+        "occultism": 0,
+        "performance": 0,
+        "religion": 1,
+        "society": 0,
+        "stealth": 2,
+        "survival": 4,
+        "thievery": 2
+      },
+      "strikes": [
+        {
+          "name": "Longsword",
+          "attack_bonus": 9,
+          "damage_formula": "{(1d8+4)[slashing]}",
+          "damage_type": null,
+          "traits": [
+            "versatile-piercing"
+          ],
+          "melee": true,
+          "reach_ft": 5,
+          "range_increment_ft": null,
+          "attribute": "strength",
+          "damage_includes_conditions": false
+        },
+        {
+          "name": "Shortbow",
+          "attack_bonus": 7,
+          "damage_formula": "{(1d6)[piercing]}",
+          "damage_type": null,
+          "traits": [
+            "deadly-d10"
+          ],
+          "melee": false,
+          "reach_ft": null,
+          "range_increment_ft": 60,
+          "attribute": "dexterity",
+          "damage_includes_conditions": false
+        },
+        {
+          "name": "Fist",
+          "attack_bonus": 9,
+          "damage_formula": "{(1d4+4)[bludgeoning]}",
+          "damage_type": null,
+          "traits": [
+            "agile",
+            "finesse",
+            "nonlethal"
+          ],
+          "melee": true,
+          "reach_ft": 5,
+          "range_increment_ft": null,
+          "attribute": "strength",
+          "damage_includes_conditions": false
+        }
+      ],
+      "spellcasting": [],
+      "iwr": {
+        "immunities": [],
+        "weaknesses": [],
+        "resistances": []
+      },
+      "reactions": {
+        "reactive_strike": true,
+        "shield_block": true
+      },
+      "shield": {
+        "name": "Steel Shield",
+        "ac_bonus": 2,
+        "hardness": 5,
+        "hp": 20,
+        "max_hp": 20,
+        "broken_threshold": 10,
+        "raised": false
+      },
+      "conditions": [],
+      "persistent": [],
+      "class_dc": 17,
+      "sneak_attack": null,
+      "initiative": 14.0,
+      "hazard": null,
+      "reaction_used": false,
+      "uses_dying_rules": true
+    },
+    {
+      "token_id": "tok02",
+      "actor_id": "act02",
+      "name": "Pip Quickfoot 1",
+      "kind": "character",
+      "side": "party",
+      "x": 2,
+      "y": 7,
+      "level": 1,
+      "size": "small",
+      "traits": [
+        "halfling",
+        "humanoid"
+      ],
+      "hp": 15,
+      "max_hp": 15,
+      "temp_hp": 0,
+      "ac": 18,
+      "fortitude": 4,
+      "reflex": 9,
+      "will": 6,
+      "perception": 6,
+      "speed": 25,
+      "attributes": {
+        "strength": -1,
+        "dexterity": 4,
+        "constitution": 1,
+        "intelligence": 2,
+        "wisdom": 1,
+        "charisma": 2
+      },
+      "skills": {
+        "acrobatics": 6,
+        "arcana": 2,
+        "athletics": 1,
+        "crafting": 5,
+        "deception": 5,
+        "diplomacy": 5,
+        "intimidation": 5,
+        "medicine": 1,
+        "nature": 1,
+        "occultism": 5,
+        "performance": 2,
+        "religion": 1,
+        "society": 5,
+        "stealth": 6,
+        "survival": 1,
+        "thievery": 6
+      },
+      "strikes": [
+        {
+          "name": "Rapier",
+          "attack_bonus": 7,
+          "damage_formula": "{(1d6-1)[piercing]}",
+          "damage_type": null,
+          "traits": [
+            "deadly-d8",
+            "disarm",
+            "finesse"
+          ],
+          "melee": true,
+          "reach_ft": 5,
+          "range_increment_ft": null,
+          "attribute": "dexterity",
+          "damage_includes_conditions": false
+        },
+        {
+          "name": "Shortbow",
+          "attack_bonus": 7,
+          "damage_formula": "{(1d6)[piercing]}",
+          "damage_type": null,
+          "traits": [
+            "deadly-d10"
+          ],
+          "melee": false,
+          "reach_ft": null,
+          "range_increment_ft": 60,
+          "attribute": "dexterity",
+          "damage_includes_conditions": false
+        },
+        {
+          "name": "Fist",
+          "attack_bonus": 7,
+          "damage_formula": "{(1d4-1)[bludgeoning]}",
+          "damage_type": null,
+          "traits": [
+            "agile",
+            "finesse",
+            "nonlethal"
+          ],
+          "melee": true,
+          "reach_ft": 5,
+          "range_increment_ft": null,
+          "attribute": "dexterity",
+          "damage_includes_conditions": false
+        }
+      ],
+      "spellcasting": [],
+      "iwr": {
+        "immunities": [],
+        "weaknesses": [],
+        "resistances": []
+      },
+      "reactions": {
+        "reactive_strike": false,
+        "shield_block": false
+      },
+      "shield": null,
+      "conditions": [],
+      "persistent": [],
+      "class_dc": 17,
+      "sneak_attack": "1d6",
+      "initiative": 11.0,
+      "hazard": null,
+      "reaction_used": false,
+      "uses_dying_rules": true
+    },
+    {
+      "token_id": "tok03",
+      "actor_id": "act03",
+      "name": "Brother Odo 1",
+      "kind": "character",
+      "side": "party",
+      "x": 1,
+      "y": 6,
+      "level": 1,
+      "size": "medium",
+      "traits": [
+        "dwarf",
+        "humanoid"
+      ],
+      "hp": 21,
+      "max_hp": 21,
+      "temp_hp": 0,
+      "ac": 15,
+      "fortitude": 6,
+      "reflex": 3,
+      "will": 9,
+      "perception": 7,
+      "speed": 20,
+      "attributes": {
+        "strength": 2,
+        "dexterity": 0,
+        "constitution": 3,
+        "intelligence": 0,
+        "wisdom": 4,
+        "charisma": 0
+      },
+      "skills": {
+        "acrobatics": 0,
+        "arcana": 0,
+        "athletics": 2,
+        "crafting": 0,
+        "deception": 0,
+        "diplomacy": 3,
+        "intimidation": 0,
+        "medicine": 7,
+        "nature": 4,
+        "occultism": 0,
+        "performance": 0,
+        "religion": 7,
+        "society": 0,
+        "stealth": 0,
+        "survival": 4,
+        "thievery": 0
+      },
+      "strikes": [
+        {
+          "name": "Mace",
+          "attack_bonus": 5,
+          "damage_formula": "{(1d6+2)[bludgeoning]}",
+          "damage_type": null,
+          "traits": [
+            "shove"
+          ],
+          "melee": true,
+          "reach_ft": 5,
+          "range_increment_ft": null,
+          "attribute": "strength",
+          "damage_includes_conditions": false
+        },
+        {
+          "name": "Crossbow",
+          "attack_bonus": 3,
+          "damage_formula": "{(1d8)[piercing]}",
+          "damage_type": null,
+          "traits": [],
+          "melee": false,
+          "reach_ft": null,
+          "range_increment_ft": 120,
+          "attribute": "dexterity",
+          "damage_includes_conditions": false
+        },
+        {
+          "name": "Fist",
+          "attack_bonus": 5,
+          "damage_formula": "{(1d4+2)[bludgeoning]}",
+          "damage_type": null,
+          "traits": [
+            "agile",
+            "finesse",
+            "nonlethal"
+          ],
+          "melee": true,
+          "reach_ft": 5,
+          "range_increment_ft": null,
+          "attribute": "strength",
+          "damage_includes_conditions": false
+        }
+      ],
+      "spellcasting": [
+        {
+          "name": "Divine Prepared spells",
+          "tradition": "divine",
+          "kind": "prepared",
+          "attribute": "wisdom",
+          "attack_bonus": 7,
+          "dc": 17,
+          "slots": {
+            "1": 2
+          },
+          "spells": [
+            {
+              "slug": "divine-lance",
+              "name": "Divine Lance",
+              "rank": 1,
+              "base_rank": 1,
+              "cantrip": true,
+              "actions": 2,
+              "range_ft": 30,
+              "area": null,
+              "target_count": null,
+              "targets_allies": false,
+              "targets_self": false,
+              "defense": null,
+              "damage": [],
+              "healing": null,
+              "heightening": null,
+              "traits": [
+                "cantrip",
+                "concentrate",
+                "manipulate",
+                "sanctified"
+              ]
+            },
+            {
+              "slug": "void-warp",
+              "name": "Void Warp",
+              "rank": 1,
+              "base_rank": 1,
+              "cantrip": true,
+              "actions": 2,
+              "range_ft": 30,
+              "area": null,
+              "target_count": null,
+              "targets_allies": false,
+              "targets_self": false,
+              "defense": null,
+              "damage": [],
+              "healing": null,
+              "heightening": null,
+              "traits": [
+                "cantrip",
+                "concentrate",
+                "manipulate",
+                "void"
+              ]
+            },
+            {
+              "slug": "bless",
+              "name": "Bless",
+              "rank": 1,
+              "base_rank": 1,
+              "cantrip": false,
+              "actions": 2,
+              "range_ft": null,
+              "area": null,
+              "target_count": null,
+              "targets_allies": false,
+              "targets_self": false,
+              "defense": null,
+              "damage": [],
+              "healing": null,
+              "heightening": null,
+              "traits": [
+                "aura",
+                "concentrate",
+                "manipulate",
+                "mental"
+              ]
+            },
+            {
+              "slug": "heal",
+              "name": "Heal",
+              "rank": 1,
+              "base_rank": 1,
+              "cantrip": false,
+              "actions": 2,
+              "range_ft": 30,
+              "area": null,
+              "target_count": null,
+              "targets_allies": false,
+              "targets_self": false,
+              "defense": null,
+              "damage": [],
+              "healing": null,
+              "heightening": null,
+              "traits": [
+                "concentrate",
+                "healing",
+                "manipulate",
+                "vitality"
+              ]
+            }
+          ]
+        }
+      ],
+      "iwr": {
+        "immunities": [],
+        "weaknesses": [],
+        "resistances": []
+      },
+      "reactions": {
+        "reactive_strike": false,
+        "shield_block": false
+      },
+      "shield": {
+        "name": "Wooden Shield",
+        "ac_bonus": 2,
+        "hardness": 3,
+        "hp": 12,
+        "max_hp": 12,
+        "broken_threshold": 6,
+        "raised": false
+      },
+      "conditions": [],
+      "persistent": [],
+      "class_dc": 17,
+      "sneak_attack": null,
+      "initiative": 14.0,
+      "hazard": null,
+      "reaction_used": false,
+      "uses_dying_rules": true
+    },
+    {
+      "token_id": "tok04",
+      "actor_id": "act04",
+      "name": "Ezren Vale 1",
+      "kind": "character",
+      "side": "party",
+      "x": 1,
+      "y": 8,
+      "level": 1,
+      "size": "medium",
+      "traits": [
+        "elf",
+        "humanoid"
+      ],
+      "hp": 12,
+      "max_hp": 12,
+      "temp_hp": 0,
+      "ac": 16,
+      "fortitude": 3,
+      "reflex": 6,
+      "will": 7,
+      "perception": 5,
+      "speed": 30,
+      "attributes": {
+        "strength": 0,
+        "dexterity": 3,
+        "constitution": 0,
+        "intelligence": 4,
+        "wisdom": 2,
+        "charisma": 0
+      },
+      "skills": {
+        "acrobatics": 3,
+        "arcana": 7,
+        "athletics": 0,
+        "crafting": 7,
+        "deception": 0,
+        "diplomacy": 3,
+        "intimidation": 0,
+        "medicine": 5,
+        "nature": 5,
+        "occultism": 7,
+        "performance": 0,
+        "religion": 2,
+        "society": 7,
+        "stealth": 3,
+        "survival": 2,
+        "thievery": 3
+      },
+      "strikes": [
+        {
+          "name": "Staff",
+          "attack_bonus": 3,
+          "damage_formula": "{(1d4)[bludgeoning]}",
+          "damage_type": null,
+          "traits": [
+            "two-hand-d8"
+          ],
+          "melee": true,
+          "reach_ft": 5,
+          "range_increment_ft": null,
+          "attribute": "strength",
+          "damage_includes_conditions": false
+        },
+        {
+          "name": "Fist",
+          "attack_bonus": 6,
+          "damage_formula": "{(1d4)[bludgeoning]}",
+          "damage_type": null,
+          "traits": [
+            "agile",
+            "finesse",
+            "nonlethal"
+          ],
+          "melee": true,
+          "reach_ft": 5,
+          "range_increment_ft": null,
+          "attribute": "dexterity",
+          "damage_includes_conditions": false
+        }
+      ],
+      "spellcasting": [
+        {
+          "name": "Arcane Prepared spells",
+          "tradition": "arcane",
+          "kind": "prepared",
+          "attribute": "intelligence",
+          "attack_bonus": 7,
+          "dc": 17,
+          "slots": {
+            "1": 2
+          },
+          "spells": [
+            {
+              "slug": "electric-arc",
+              "name": "Electric Arc",
+              "rank": 1,
+              "base_rank": 1,
+              "cantrip": true,
+              "actions": 2,
+              "range_ft": 30,
+              "area": null,
+              "target_count": null,
+              "targets_allies": false,
+              "targets_self": false,
+              "defense": null,
+              "damage": [],
+              "healing": null,
+              "heightening": null,
+              "traits": [
+                "cantrip",
+                "concentrate",
+                "manipulate",
+                "electricity"
+              ]
+            },
+            {
+              "slug": "ignition",
+              "name": "Ignition",
+              "rank": 1,
+              "base_rank": 1,
+              "cantrip": true,
+              "actions": 2,
+              "range_ft": 30,
+              "area": null,
+              "target_count": null,
+              "targets_allies": false,
+              "targets_self": false,
+              "defense": null,
+              "damage": [],
+              "healing": null,
+              "heightening": null,
+              "traits": [
+                "cantrip",
+                "concentrate",
+                "manipulate",
+                "fire"
+              ]
+            },
+            {
+              "slug": "fear",
+              "name": "Fear",
+              "rank": 1,
+              "base_rank": 1,
+              "cantrip": false,
+              "actions": 2,
+              "range_ft": 30,
+              "area": null,
+              "target_count": null,
+              "targets_allies": false,
+              "targets_self": false,
+              "defense": null,
+              "damage": [],
+              "healing": null,
+              "heightening": null,
+              "traits": [
+                "concentrate",
+                "emotion",
+                "fear",
+                "manipulate",
+                "mental"
+              ]
+            },
+            {
+              "slug": "force-barrage",
+              "name": "Force Barrage",
+              "rank": 1,
+              "base_rank": 1,
+              "cantrip": false,
+              "actions": 2,
+              "range_ft": 120,
+              "area": null,
+              "target_count": null,
+              "targets_allies": false,
+              "targets_self": false,
+              "defense": null,
+              "damage": [],
+              "healing": null,
+              "heightening": null,
+              "traits": [
+                "concentrate",
+                "force",
+                "manipulate"
+              ]
+            }
+          ]
+        }
+      ],
+      "iwr": {
+        "immunities": [],
+        "weaknesses": [],
+        "resistances": []
+      },
+      "reactions": {
+        "reactive_strike": false,
+        "shield_block": false
+      },
+      "shield": null,
+      "conditions": [],
+      "persistent": [],
+      "class_dc": 17,
+      "sneak_attack": null,
+      "initiative": 9.0,
+      "hazard": null,
+      "reaction_used": false,
+      "uses_dying_rules": true
+    },
+    {
+      "token_id": "tok05",
+      "actor_id": "act05",
+      "name": "Bone Sentinel 1",
+      "kind": "monster",
+      "side": "enemy",
+      "x": 10,
+      "y": 6,
+      "level": 0,
+      "size": "medium",
+      "traits": [
+        "mindless",
+        "undead"
+      ],
+      "hp": 14,
+      "max_hp": 14,
+      "temp_hp": 0,
+      "ac": 16,
+      "fortitude": 4,
+      "reflex": 8,
+      "will": 4,
+      "perception": 4,
+      "speed": 25,
+      "attributes": {
+        "strength": 2,
+        "dexterity": 3,
+        "constitution": 0,
+        "intelligence": -5,
+        "wisdom": 0,
+        "charisma": 0
+      },
+      "skills": {},
+      "strikes": [
+        {
+          "name": "Rusted Blade",
+          "attack_bonus": 7,
+          "damage_formula": "{(1d6+2)[slashing]}",
+          "damage_type": null,
+          "traits": [
+            "forceful",
+            "sweep"
+          ],
+          "melee": true,
+          "reach_ft": 5,
+          "range_increment_ft": null,
+          "attribute": "strength",
+          "damage_includes_conditions": false
+        },
+        {
+          "name": "Claw",
+          "attack_bonus": 7,
+          "damage_formula": "{(1d4+2)[slashing]}",
+          "damage_type": null,
+          "traits": [
+            "agile"
+          ],
+          "melee": true,
+          "reach_ft": 5,
+          "range_increment_ft": null,
+          "attribute": "strength",
+          "damage_includes_conditions": false
+        }
+      ],
+      "spellcasting": [],
+      "iwr": {
+        "immunities": [
+          "poison",
+          "mental",
+          "bleed"
+        ],
+        "weaknesses": [
+          {
+            "type": "vitality",
+            "value": 5
+          },
+          {
+            "type": "bludgeoning",
+            "value": 2
+          }
+        ],
+        "resistances": [
+          {
+            "type": "piercing",
+            "value": 3
+          },
+          {
+            "type": "slashing",
+            "value": 3
+          },
+          {
+            "type": "cold",
+            "value": 3
+          }
+        ]
+      },
+      "reactions": {
+        "reactive_strike": false,
+        "shield_block": false
+      },
+      "shield": null,
+      "conditions": [],
+      "persistent": [],
+      "class_dc": null,
+      "sneak_attack": null,
+      "initiative": 19.0,
+      "hazard": null,
+      "reaction_used": false,
+      "uses_dying_rules": false
+    },
+    {
+      "token_id": "tok06",
+      "actor_id": "act06",
+      "name": "Goblin Cutter 1",
+      "kind": "monster",
+      "side": "enemy",
+      "x": 12,
+      "y": 3,
+      "level": -1,
+      "size": "small",
+      "traits": [
+        "goblin",
+        "humanoid"
+      ],
+      "hp": 7,
+      "max_hp": 7,
+      "temp_hp": 0,
+      "ac": 15,
+      "fortitude": 4,
+      "reflex": 7,
+      "will": 2,
+      "perception": 3,
+      "speed": 25,
+      "attributes": {
+        "strength": 0,
+        "dexterity": 3,
+        "constitution": 1,
+        "intelligence": 0,
+        "wisdom": -1,
+        "charisma": 1
+      },
+      "skills": {
+        "acrobatics": 5,
+        "stealth": 5
+      },
+      "strikes": [
+        {
+          "name": "Jagged Blade",
+          "attack_bonus": 7,
+          "damage_formula": "{(1d6)[slashing]}",
+          "damage_type": null,
+          "traits": [
+            "agile",
+            "finesse",
+            "backswing"
+          ],
+          "melee": true,
+          "reach_ft": 5,
+          "range_increment_ft": null,
+          "attribute": "dexterity",
+          "damage_includes_conditions": false
+        },
+        {
+          "name": "Shortbow",
+          "attack_bonus": 7,
+          "damage_formula": "{(1d6)[piercing]}",
+          "damage_type": null,
+          "traits": [
+            "deadly-d10"
+          ],
+          "melee": false,
+          "reach_ft": null,
+          "range_increment_ft": 60,
+          "attribute": "dexterity",
+          "damage_includes_conditions": false
+        }
+      ],
+      "spellcasting": [],
+      "iwr": {
+        "immunities": [],
+        "weaknesses": [],
+        "resistances": []
+      },
+      "reactions": {
+        "reactive_strike": false,
+        "shield_block": false
+      },
+      "shield": null,
+      "conditions": [],
+      "persistent": [],
+      "class_dc": null,
+      "sneak_attack": null,
+      "initiative": 9.0,
+      "hazard": null,
+      "reaction_used": false,
+      "uses_dying_rules": false
+    },
+    {
+      "token_id": "tok07",
+      "actor_id": "act07",
+      "name": "Goblin Cutter 2",
+      "kind": "monster",
+      "side": "enemy",
+      "x": 12,
+      "y": 9,
+      "level": -1,
+      "size": "small",
+      "traits": [
+        "goblin",
+        "humanoid"
+      ],
+      "hp": 7,
+      "max_hp": 7,
+      "temp_hp": 0,
+      "ac": 15,
+      "fortitude": 4,
+      "reflex": 7,
+      "will": 2,
+      "perception": 3,
+      "speed": 25,
+      "attributes": {
+        "strength": 0,
+        "dexterity": 3,
+        "constitution": 1,
+        "intelligence": 0,
+        "wisdom": -1,
+        "charisma": 1
+      },
+      "skills": {
+        "acrobatics": 5,
+        "stealth": 5
+      },
+      "strikes": [
+        {
+          "name": "Jagged Blade",
+          "attack_bonus": 7,
+          "damage_formula": "{(1d6)[slashing]}",
+          "damage_type": null,
+          "traits": [
+            "agile",
+            "finesse",
+            "backswing"
+          ],
+          "melee": true,
+          "reach_ft": 5,
+          "range_increment_ft": null,
+          "attribute": "dexterity",
+          "damage_includes_conditions": false
+        },
+        {
+          "name": "Shortbow",
+          "attack_bonus": 7,
+          "damage_formula": "{(1d6)[piercing]}",
+          "damage_type": null,
+          "traits": [
+            "deadly-d10"
+          ],
+          "melee": false,
+          "reach_ft": null,
+          "range_increment_ft": 60,
+          "attribute": "dexterity",
+          "damage_includes_conditions": false
+        }
+      ],
+      "spellcasting": [],
+      "iwr": {
+        "immunities": [],
+        "weaknesses": [],
+        "resistances": []
+      },
+      "reactions": {
+        "reactive_strike": false,
+        "shield_block": false
+      },
+      "shield": null,
+      "conditions": [],
+      "persistent": [],
+      "class_dc": null,
+      "sneak_attack": null,
+      "initiative": 22.0,
+      "hazard": null,
+      "reaction_used": false,
+      "uses_dying_rules": false
+    },
+    {
+      "token_id": "tok08",
+      "actor_id": "act08",
+      "name": "Spiked Pit 1",
+      "kind": "hazard",
+      "side": "enemy",
+      "x": 8,
+      "y": 4,
+      "level": 0,
+      "size": "medium",
+      "traits": [
+        "mechanical",
+        "trap"
+      ],
+      "hp": 20,
+      "max_hp": 20,
+      "temp_hp": 0,
+      "ac": 10,
+      "fortitude": 8,
+      "reflex": 0,
+      "will": 0,
+      "perception": 0,
+      "speed": 0,
+      "attributes": {
+        "strength": 0,
+        "dexterity": 0,
+        "constitution": 0,
+        "intelligence": 0,
+        "wisdom": 0,
+        "charisma": 0
+      },
+      "skills": {},
+      "strikes": [],
+      "spellcasting": [],
+      "iwr": {
+        "immunities": [],
+        "weaknesses": [],
+        "resistances": []
+      },
+      "reactions": {
+        "reactive_strike": false,
+        "shield_block": false
+      },
+      "shield": null,
+      "conditions": [],
+      "persistent": [],
+      "class_dc": null,
+      "sneak_attack": null,
+      "initiative": null,
+      "hazard": {
+        "complex": false,
+        "stealth_dc": 18,
+        "disable": [
+          {
+            "skill": "thievery",
+            "dc": 15
+          }
+        ]
+      },
+      "reaction_used": false,
+      "uses_dying_rules": false
+    }
+  ],
+  "turn": {
+    "started": true,
+    "round": 1,
+    "current": "tok07",
+    "order": [
+      "tok07",
+      "tok05",
+      "tok01",
+      "tok03",
+      "tok02",
+      "tok06",
+      "tok04"
+    ],
+    "actions_spent": 0,
+    "attacks_made": 0
+  },
+  "options": {
+    "flanking": true,
+    "auto_cover": true,
+    "crop_margin": 12
+  }
+}

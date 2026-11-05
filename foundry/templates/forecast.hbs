@@ -1,0 +1,14 @@
+<div class="sf-report sf-forecast">
+  {{#each bars}}
+    <div class="sf-bar-row"><span class="label">{{label}}</span><span class="track"><span class="fill {{cls}}" style="width: {{width}}"></span></span><span class="value">{{value}}</span></div>
+  {{/each}}
+  <p class="sf-muted">{{runs}} {{localize "PF2E_STOCKFISH.Forecast.runs"}} · {{margin}} · {{localize "PF2E_STOCKFISH.Forecast.rounds"}} {{rounds}}</p>
+  <div class="sf-columns">
+    <table class="sf-table"><thead><tr><th>{{localize "PF2E_STOCKFISH.Forecast.party"}}</th><th>{{localize "PF2E_STOCKFISH.Forecast.down"}}</th><th>{{localize "PF2E_STOCKFISH.Forecast.dead"}}</th></tr></thead>
+      <tbody>{{#each party}}<tr><td>{{name}}</td><td>{{down}}</td><td>{{death}}</td></tr>{{/each}}</tbody></table>
+    <table class="sf-table"><thead><tr><th>{{localize "PF2E_STOCKFISH.Forecast.enemies"}}</th><th>{{localize "PF2E_STOCKFISH.Forecast.down"}}</th><th>{{localize "PF2E_STOCKFISH.Forecast.dead"}}</th></tr></thead>
+      <tbody>{{#each enemies}}<tr><td>{{name}}</td><td>{{down}}</td><td>{{death}}</td></tr>{{/each}}</tbody></table>
+  </div>
+  <p class="sf-muted sf-disclaimer">{{localize "PF2E_STOCKFISH.Forecast.disclaimer"}}</p>
+  <footer class="sf-foot"><button type="button" data-action="rerun"><i class="fa-solid fa-rotate"></i></button></footer>
+</div>

@@ -1,0 +1,107 @@
+/* PF2e Stockfish — uses Foundry v13 theme variables where available so it
+   follows the light/dark interface theme. */
+
+:root {
+  --sf-party: #e8e6e3;
+  --sf-enemy: #2b2b2b;
+  --sf-good: #2e7d32;
+  --sf-bad: #c62828;
+  --sf-neutral: var(--color-text-secondary, #888);
+  --sf-accent: var(--color-warm-2, #c9593f);
+}
+
+/* ---- Evaluation bar ---------------------------------------------------- */
+#pf2e-stockfish-evalbar {
+  position: fixed;
+  top: 120px;
+  z-index: 60;
+  display: flex;
+  gap: 6px;
+  align-items: stretch;
+  height: 42vh;
+  min-height: 220px;
+  cursor: pointer;
+  user-select: none;
+  pointer-events: auto;
+}
+#pf2e-stockfish-evalbar.side-left { left: 64px; }
+#pf2e-stockfish-evalbar.side-right { right: 330px; flex-direction: row-reverse; }
+#pf2e-stockfish-evalbar[hidden] { display: none; }
+#pf2e-stockfish-evalbar .track {
+  position: relative;
+  width: 22px;
+  border: 1px solid rgba(0, 0, 0, 0.6);
+  border-radius: 4px;
+  overflow: hidden;
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+}
+#pf2e-stockfish-evalbar .enemy { background: var(--sf-enemy); transition: height 0.35s ease; }
+#pf2e-stockfish-evalbar .party { background: var(--sf-party); transition: height 0.35s ease; }
+#pf2e-stockfish-evalbar .midline { position: absolute; left: 0; right: 0; top: 50%; border-top: 1px dashed rgba(201, 89, 63, 0.8); }
+#pf2e-stockfish-evalbar .label {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  padding: 4px 6px;
+  max-width: 140px;
+  background: rgba(0, 0, 0, 0.65);
+  color: #f0f0e0;
+  border-radius: 4px;
+  font-size: var(--font-size-12, 12px);
+  align-self: center;
+}
+#pf2e-stockfish-evalbar .score { font-size: var(--font-size-20, 20px); font-family: var(--font-mono, monospace); }
+#pf2e-stockfish-evalbar.idle .label { opacity: 0.6; }
+
+/* ---- Combat tracker panel ---------------------------------------------- */
+.pf2e-stockfish-tracker { padding: 4px 6px; display: flex; flex-direction: column; gap: 4px; border-bottom: 1px solid var(--color-border, #555); }
+.pf2e-stockfish-tracker .mini-bar { position: relative; height: 14px; background: var(--sf-enemy); border-radius: 3px; overflow: hidden; }
+.pf2e-stockfish-tracker .mini-bar .party { height: 100%; background: var(--sf-party); transition: width 0.35s ease; }
+.pf2e-stockfish-tracker .mini-bar span { position: absolute; inset: 0; text-align: center; font-size: 11px; line-height: 14px; mix-blend-mode: difference; color: #fff; }
+.pf2e-stockfish-tracker .buttons { display: flex; gap: 4px; }
+.pf2e-stockfish-tracker .buttons button { flex: 1 1 auto; line-height: 22px; padding: 0 6px; }
+.pf2e-stockfish-tracker .turn-state { display: flex; gap: 6px; align-items: center; font-size: 12px; }
+.pf2e-stockfish-tracker .turn-state button { flex: 0 0 auto; width: auto; line-height: 18px; padding: 0 5px; }
+.pf2e-stockfish-tracker .pip { display: inline-block; width: 10px; height: 10px; margin-right: 2px; border-radius: 50%; border: 1px solid currentColor; }
+.pf2e-stockfish-tracker .pip.spent { background: var(--sf-accent); border-color: var(--sf-accent); }
+
+/* ---- Report windows ---------------------------------------------------- */
+.pf2e-stockfish .sf-report { display: flex; flex-direction: column; gap: 8px; }
+.pf2e-stockfish .sf-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.pf2e-stockfish .sf-head h3 { margin: 0; border: none; }
+.pf2e-stockfish .sf-tag { font-size: 11px; padding: 1px 6px; border-radius: 8px; background: var(--color-bg-option, rgba(0, 0, 0, 0.15)); }
+.pf2e-stockfish .sf-steps { margin: 0; padding-left: 1.6em; }
+.pf2e-stockfish .sf-steps li { margin: 3px 0; }
+.pf2e-stockfish .sf-steps i { width: 1.4em; text-align: center; margin-right: 4px; color: var(--sf-accent); }
+.pf2e-stockfish .sf-value { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; margin: 0; }
+.pf2e-stockfish .sf-value dd { margin: 0; font-family: var(--font-mono, monospace); }
+.pf2e-stockfish .sf-reasons { margin: 0; padding-left: 1.2em; font-size: 12px; }
+.pf2e-stockfish .sf-reasons.ranked { list-style: none; padding-left: 0; }
+.pf2e-stockfish .sf-reasons .impact { display: inline-block; min-width: 3.4em; font-family: var(--font-mono, monospace); }
+.pf2e-stockfish .good { color: var(--sf-good); }
+.pf2e-stockfish .bad { color: var(--sf-bad); }
+.pf2e-stockfish .neutral { color: var(--sf-neutral); }
+.pf2e-stockfish .sf-muted { color: var(--color-text-secondary, #777); font-size: 11px; margin: 0; }
+.pf2e-stockfish .sf-empty { font-style: italic; margin: 0; }
+.pf2e-stockfish .sf-foot { display: flex; gap: 6px; align-items: center; justify-content: flex-end; }
+.pf2e-stockfish .sf-foot .sf-muted { margin-right: auto; }
+.pf2e-stockfish .sf-foot button { flex: 0 0 auto; width: auto; }
+.pf2e-stockfish .sf-creature { border-top: 1px solid var(--color-border, #555); padding-top: 6px; display: flex; flex-direction: column; gap: 4px; }
+.pf2e-stockfish .sf-table { width: 100%; font-size: 12px; margin: 0; }
+.pf2e-stockfish .sf-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.pf2e-stockfish .sf-bar-row { display: grid; grid-template-columns: 7em 1fr 3.5em; gap: 6px; align-items: center; }
+.pf2e-stockfish .sf-bar-row .track { height: 12px; background: var(--color-bg-option, rgba(0, 0, 0, 0.15)); border-radius: 3px; overflow: hidden; }
+.pf2e-stockfish .sf-bar-row .fill { display: block; height: 100%; }
+.pf2e-stockfish .sf-bar-row .fill.good { background: var(--sf-good); }
+.pf2e-stockfish .sf-bar-row .fill.bad { background: var(--sf-bad); }
+.pf2e-stockfish .sf-bar-row .fill.neutral { background: var(--sf-neutral); }
+.pf2e-stockfish .sf-bar-row .value { text-align: right; font-family: var(--font-mono, monospace); }
+
+@media (prefers-reduced-motion: reduce) {
+  #pf2e-stockfish-evalbar .enemy,
+  #pf2e-stockfish-evalbar .party,
+  .pf2e-stockfish-tracker .mini-bar .party { transition: none; }
+}

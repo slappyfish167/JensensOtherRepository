@@ -29,12 +29,19 @@ Built so far (phase 1 — foundations):
 5. **Content import**: an importer for Foundry-style or Archives-of-Nethys-style JSON, plus a
    content-pack format with source/licence metadata (ORC).
 
+## Foundry VTT module
+
+Built: see [FOUNDRY.md](FOUNDRY.md) (1.0 feature set, 1.5 and 2.0 roadmap). Thin walls between
+squares (`Battlefield::edges`) were added to the core for Foundry walls.
+
 ## Phase 3 — engine & analysis
 
-1. Transposition table + iterative deepening in the turn search; parallel root search.
+1. ~~Transposition table + iterative deepening in the turn search~~ (done, with an evaluation
+   cache, deadline budgets and exact multi-worker Monte Carlo); parallel root search.
 2. Evaluator trained on Monte Carlo outcomes (keep the heuristic one as baseline and fallback).
 3. Multi-turn lookahead with opponent models (scripted → shallow search).
-4. "Explain this evaluation change" diffs between two positions; blunder check for a declared turn.
+4. ~~"Explain this evaluation change" diffs between two positions~~ (done: `pf2e_ai::explain`);
+   blunder check for a declared turn.
 5. Snapshot every N commands to speed up loading very long combats.
 
 ## Phase 4 — product

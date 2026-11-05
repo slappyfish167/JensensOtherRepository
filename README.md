@@ -30,6 +30,21 @@ An illustrative exchange:
 * **Tactical analysis** — evaluation bar with factor breakdown, best 3-action turn (expectiminimax),
   strongest target, best spell, monster strategy, Monte Carlo TPK probability.
 
+## Foundry VTT module ("PF2e Stockfish")
+
+The same engine runs inside **Foundry VTT v13 + PF2e** as a module (`foundry/`): an evaluation bar,
+**Analyze Best Turn**, a GM **monster assistant**, a Monte Carlo **threat forecast** and
+**explain position**, computed locally in a WebAssembly worker from the live combat (Foundry stays
+the source of truth). Best turn ≈ 100 ms, monster plan ≈ 0.2 s, 200-run forecast < 1 s in the
+browser. See [docs/FOUNDRY.md](docs/FOUNDRY.md).
+
+```bash
+rustup target add wasm32-unknown-unknown
+cargo install wasm-bindgen-cli --version 0.2.130 --locked
+scripts/build-wasm.sh
+cd foundry && npm ci && npm run build   # → foundry/dist/pf2e-stockfish (install folder)
+```
+
 ## Quick start
 
 Requirements: Rust 1.80+, Node 18+.
@@ -68,6 +83,10 @@ cargo test --workspace
 cd frontend && npm run typecheck && npm test
 ```
 
+```bash
+scripts/build-wasm.sh && cd foundry && npm run typecheck && npm test && npm run build && npm run smoke
+```
+
 The Rust suite (≈70 tests) covers dice, degrees of success, modifier stacking, IWR, conditions, grid
 geometry (diagonals, reach, cover, flanking, bursts), the builder (sample PCs are legal; illegal
 boosts/feats/spells are caught), the combat engine (MAP, crits with deadly, dying and recovery,
@@ -85,6 +104,7 @@ wounded foes and closes distance, Monte Carlo reproducibility), storage, and the
 | [docs/ENGINE.md](docs/ENGINE.md) | Data models, resolution queue, rules algorithms, builder, example code, coverage |
 | [docs/AI.md](docs/AI.md) | Evaluation model, expectiminimax search, queries, Monte Carlo |
 | [docs/ROADMAP.md](docs/ROADMAP.md) | What comes next, suggested tests |
+| [docs/FOUNDRY.md](docs/FOUNDRY.md) | Foundry VTT module: architecture, hooks, PF2e integration, WASM, search, UX, security, roadmap |
 
 ## Repository layout
 
@@ -93,8 +113,12 @@ crates/pf2e-core     rules engine — models, builder, combat state machine (no 
 crates/pf2e-ai       optional analysis — evaluation, search, simulation (no rules)
 crates/pf2e-store    persistence — Store trait + SQLite (Postgres-compatible schema)
 crates/pf2e-server   REST API (axum), seeding, end-to-end tests
+crates/pf2e-bridge   Foundry snapshot → CombatState, token-addressed reports (pure, JSON API)
+crates/pf2e-wasm     WebAssembly build of bridge + AI + core (wasm-bindgen)
 content/             rules data (JSON), sample characters and encounter
 frontend/            React + TypeScript UI (Vite)
+foundry/             Foundry VTT module (TypeScript, Vite)
+scripts/             build-wasm.sh
 docs/                design documentation
 ```
 

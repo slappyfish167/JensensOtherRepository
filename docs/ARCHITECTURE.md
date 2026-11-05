@@ -124,7 +124,7 @@ when the user presses **Auto** for a specific roll.
 | **Unified `Statblock`** for PCs, monsters and hazards | The combat engine has one creature model; characters are *derived* by the builder. | Builder must faithfully compute derived numbers (covered by tests); GM can still import raw stat blocks. |
 | **Rules content as data** (`content/*.json`) | Content can be corrected or extended without code changes; JSON import/export everywhere. | Only behaviours the engine understands (feat effects, spell outcomes) can be expressed; new mechanics need code. |
 | **JSON documents + indexed columns** in SQL | Aggregates evolve quickly; schema stays small and portable to PostgreSQL (`TEXT`→`JSONB`). | Cross-document queries need the scalar columns we chose to index. |
-| **AI uses the real engine** for simulation | The search can never disagree with the rules; no duplicated logic. | Each node clones a state (a few KB). A node budget and beam keep searches bounded. |
+| **AI uses the real engine** for simulation | The search can never disagree with the rules; no duplicated logic. | Each node clones a state; immutable parts (stat blocks, spells, map) are `Arc`-shared so a clone is cheap, and transposition/evaluation caches avoid repeated work. A node budget, beam and optional deadline keep searches bounded. |
 | **Heuristic evaluation** (Lanchester square law) rather than learned | Explainable factors; works for any creature without training data. | Approximate; the `Evaluator` trait allows a learned evaluator to be plugged in. |
 
 ## 6. Repository layout
@@ -135,6 +135,9 @@ crates/pf2e-core/          rules engine (models, builder, combat)
 crates/pf2e-ai/            evaluation, search, simulation, queries
 crates/pf2e-store/         Store trait, SQLite impl, migrations/
 crates/pf2e-server/        axum API, seeding, integration tests
+crates/pf2e-bridge/        Foundry snapshot → state, reports (see FOUNDRY.md)
+crates/pf2e-wasm/          WebAssembly entry points
+foundry/                   Foundry VTT module
 content/                   ancestries, classes, feats, items, spells, monsters, sample PCs & encounter
 frontend/                  React + TypeScript (Vite)
 docs/                      this documentation
