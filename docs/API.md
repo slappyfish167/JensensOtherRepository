@@ -121,7 +121,7 @@ Other actions: `step`, `stand`, `take_cover`, `demoralize {target}`, `trip {targ
 | Method | Path | Answers |
 |---|---|---|
 | GET | `/api/combats/{id}/analysis/evaluation` | position score −10…+10, win estimate, factor breakdown |
-| POST | `/api/combats/{id}/analysis/best-turn` | `{node_budget?, focus?}` → "What is the best 3-action turn?" |
+| POST | `/api/combats/{id}/analysis/best-turn` | `{node_budget?, focus?, allow_end_turn?}` → "What is the best 3-action turn?" (always a concrete turn; see below) |
 | GET | `/api/combats/{id}/analysis/targets?attacker=ID` | "What is the strongest target?" |
 | GET | `/api/combats/{id}/analysis/spells` | "Which spell maximizes expected value?" |
 | POST | `/api/combats/{id}/analysis/tpk` | `{runs?, seed?, max_rounds?}` → "How likely is a TPK?" |
@@ -131,7 +131,30 @@ Other actions: `step`, `stand`, `take_cover`, `demoralize {target}`, `trip {targ
 // POST …/analysis/best-turn
 { "summary": "Bone Sentinel: Stride to (5, 7), then Stride to (2, 8), then Strike Ezren Vale with Rusted Blade (evaluation +6.5 → +6.3)",
   "steps": ["Stride to (5, 7)", "Stride to (2, 8)", "Strike Ezren Vale with Rusted Blade"],
-  "plan": { "actor": 5, "actions": [ … ], "expected_score": 6.3, "baseline_score": 6.5, "gain": 0.2, "nodes": 18342, "truncated": false } }
+  "plan": { "actor": 5, "actions": [ … ], "expected_score": 6.3, "baseline_score": 6.5, "gain": 0.2,
+            "metrics": { "expected_damage": 4.2, "expected_damage_taken": 0.0, "targets": [ … ], "status_effects": [] },
+            "alternate": { "actions": [ … ], "expected_score": 6.5, "gain": 0.0, "metrics": { … } },
+            "nodes": 18342, "truncated": false },
+  "report": {
+    "actor_name": "Bone Sentinel",
+    "primary": ["Stride to (5, 7)", "Stride to (2, 8)", "Strike Ezren Vale with Rusted Blade"],
+    "alternate": ["Take Cover", "Stride to (5, 7)", "Demoralize Kira Ironhand"],
+    "alternate_note": "expected damage 0.0, 0% to down Kira Ironhand, position +6.5 Party Advantage",
+    "expected_damage": 4.2, "expected_damage_taken": 0.0, "expected_status_effects": [],
+    "priority_target": 4, "priority_target_name": "Ezren Vale", "down_chance": 0.10,
+    "position_score": -6.3, "position": "+6.3 Party Advantage",
+    "reason": "Ezren Vale has the lowest effective HP (12).",
+    "text": "RECOMMENDED TURN — Bone Sentinel\n\nAction 1: Stride to (5, 7).\n…" } }
 ```
+
+The engine **always commits to a turn**: `plan.actions` / `report.primary` is empty only when the
+acting creature literally has no legal action (it is down, paralyzed or out of actions), and the
+`reason` then says which. It never answers "no move improves the position". `report` always
+carries the primary plan, an alternate plan (when any other legal opening exists), expected damage,
+expected status effects (`{name, effect, probability}`, e.g. `frightened 1`, `prone`,
+`persistent bleed 1d6`), the priority target and the chance to down it, and the resulting position
+from the actor's side (`+0.3 Monster Advantage`). `report.text` is the same read-out as a printable
+block. `allow_end_turn: true` opts into advisory mode, where ending the turn early competes with
+acting. The strategy endpoint returns a `report` for each creature's recommendation as well.
 
 Analysis never modifies the live combat; it works on copies.

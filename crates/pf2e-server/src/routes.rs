@@ -361,12 +361,15 @@ struct BestTurnReq {
     node_budget: Option<usize>,
     #[serde(default)]
     focus: Option<CombatantId>,
+    /// Advisory mode: allow "end the turn" to compete with acting.
+    #[serde(default)]
+    allow_end_turn: bool,
 }
 
 async fn best_turn(State(app): State<SharedApp>, Path(id): Path<String>, body: Option<Json<BestTurnReq>>) -> J {
     let s = app.snapshot(&id)?;
     let req = body.map(|b| b.0).unwrap_or_default();
-    let cfg = SearchConfig { node_budget: req.node_budget.unwrap_or(40_000).min(400_000), focus: req.focus, ..Default::default() };
+    let cfg = SearchConfig { node_budget: req.node_budget.unwrap_or(40_000).min(400_000), focus: req.focus, allow_end_turn: req.allow_end_turn, ..Default::default() };
     let rec = blocking(move || recommend_turn(&s, cfg)).await?;
     match rec {
         Some(r) => ok(r),

@@ -38,13 +38,19 @@ Position (assume everyone engaged), Resources (empty all spell slots), Battlefie
 
 ## 2. "What is the best 3-action turn?" — expectiminimax
 
+The engine plays to win. When it controls a creature it always returns the **best legal combat
+turn**. Ending the turn early is not a candidate while any legal action remains, so the answer is
+never "no move improves the position". A turn comes back empty only when the creature literally
+has no legal action. If every line loses ground, the engine still picks the one that loses least.
+
 ```
 decide(state):                       # the acting creature's choice
-    best = leaf(state)               # stopping here (end turn) is always an option
+    if no actions left or cannot act: return leaf(state)
+    best = None                      # committed: stopping is not an option
     for action in candidates(state):
         child = state.clone(); child.apply(Act(action))
         best = max(best, resolve(child, decide))
-    return best
+    return best ?? leaf(state)       # only when nothing could legally be taken
 
 resolve(state, then):                # nature and opponents
     match state.pending():
@@ -54,16 +60,73 @@ resolve(state, then):                # nature and opponents
         Decision(react)   → max over {accept, decline} if the reactor is on our side, else min
 ```
 
+`SearchConfig.allow_end_turn = true` (API: `allow_end_turn`) restores advisory mode, where
+`best` starts as `leaf(state)` and stopping competes with acting.
+
 * **Chance nodes** use `representative_faces(modifier, dc)`: one natural roll per achievable degree,
   weighted by its exact probability (at most 4 branches instead of 20).
 * **Move generation** prunes, never invents: from the engine's legal list it keeps all attacks,
   spells and maneuvers, one escaping Step, and a few Stride destinations — the cheapest square
   threatening each foe (bonus for flanking squares), an approach square, and a retreat square for
   ranged creatures.
-* **Budget**: `node_budget` (default 40 000); past half the budget chance nodes collapse to their
-  most likely outcome and the plan is flagged `truncated`. Below the root a beam keeps the 8 best
-  ordered candidates.
+* **Committed move generation** also keeps Take Cover. If pruning leaves nothing, it falls back to raw
+  legal actions, so a creature with any legal action always has a candidate.
+* **Budget**: `node_budget` (default 40 000). Each opening (root) action searches inside a budget
+  window: it may use what is left but must leave a reserve of `budget / 4n` for every opening
+  still to come. Past half of its window, chance nodes collapse to their most likely outcome.
+  Past the whole window, the rest of the turn is filled greedily (one-ply lookahead per action)
+  rather than abandoned. Either way the plan is flagged `truncated`. The windows matter: without
+  them, late openings were judged on collapsed trees, which always assume the likeliest result
+  (usually a hit), so they looked better than they were. Below the root, a beam keeps the 8
+  best-ordered candidates.
 * The reported plan is the principal variation along the most likely outcomes.
+* **Outcome metrics** travel with every node and are aggregated with the same probabilities and
+  choices as the score: damage dealt to each hostile creature, damage the actor takes, whether
+  each foe is down, and every condition, persistent damage or effect newly applied. The death
+  track (dying/unconscious/wounded/doomed) is reported only as the chance to down the target.
+  The expectations therefore describe the adaptive policy the search found. Because that policy
+  can switch targets in branches where the first Strike misses, they are not limited to the
+  principal line.
+* **Alternate plan**: the best other opening whose idea differs from the primary (another kind of
+  first action, or another target). If none differs, the next-best opening is used.
+
+### Tactical report (`queries::recommend_turn`)
+
+Every recommendation carries a `TacticalReport`:
+
+| Field | Meaning |
+|---|---|
+| `primary` / `alternate` | the two action plans, described step by step (Strides note the foes they flank) |
+| `expected_damage` | expected HP removed from hostile creatures this turn |
+| `expected_status_effects` | `{name, effect, probability}`, most likely first |
+| `priority_target` | the creature the primary plan is aimed at: most actions in the plan, then most expected damage and chance to drop it |
+| `down_chance` | P(priority target is down at the end of the turn) |
+| `position` | expected evaluation after the turn from the actor's side, e.g. `+0.3 Monster Advantage` (always signed toward one side, never "equal") |
+| `reason` | why: lowest effective HP / biggest threat / best threat-per-damage, drop chance and the action-economy value of removing a PC, flanking, likely conditions, reaction damage accepted |
+| `text` | the whole read-out as a printable block |
+
+```
+RECOMMENDED TURN — Cave Brute
+
+Action 1: Strike Kira with Blade.
+Action 2: Strike Kira with Blade.
+Action 3: Demoralize Valeros.
+
+ALTERNATE TURN
+…
+Expected Damage:
+14.0
+
+Chance to Down Target:
+58%
+
+Position Evaluation:
++1.9 Monster Advantage
+
+Reason:
+Kira has the lowest effective HP (14); 58% chance to drop Kira this turn — removing a player
+grants an action economy advantage.
+```
 
 Measured on the sample Crypt Ambush (release build, one core): a best-turn query takes ~0.05 s,
 the full three-monster strategy query ~2 s, and a 200-run TPK simulation ~2.5 s. Turns with many
@@ -75,7 +138,7 @@ multi-target saves grow fastest (4ⁿ save outcomes); the budget keeps them boun
 |---|---|---|
 | Strongest target | `queries::rank_targets` | expected damage this turn (`round_damage` × engagement × actions), kill probability (enumerates hit/crit/miss for up to three Strikes), target threat (its own damage/round vs our side). `priority = threat × (P(kill) + E[dmg]/HP)` — threat removed per point of damage. |
 | Best spell | `queries::rank_spells` | for every castable spell option: one-ply expectiminimax gain in evaluation, plus exact expectations over the chance tree of enemy HP lost, ally HP healed and P(an enemy drops). |
-| TPK odds | `simulate::simulate` | Monte Carlo: seeded dice + a fast scripted policy for every creature (best immediate expected value, else close distance, else end turn). Reports win/TPK/death rates per side and per creature. Deterministic for a given seed. |
+| TPK odds | `simulate::simulate` | Monte Carlo: seeded dice + a fast scripted policy for every creature (best immediate expected value, else close distance; hostile creatures then fall back to their best remaining attack, a defensive action, or any legal action instead of ending the turn). Reports win/TPK/death rates per side and per creature. Deterministic for a given seed. |
 | Monster strategy | `queries::side_strategy` | for every creature on the side: `hypothetical_turn` (the core's start-of-turn on a copy) + best-turn search; a focus target chosen by summed target priorities; the biggest evaluation swing factor. |
 
 ## 4. Extending

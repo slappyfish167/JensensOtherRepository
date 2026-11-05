@@ -27,7 +27,9 @@ An illustrative exchange:
 * **Human-controlled dice** — the engine prompts, you roll and type the result. Seeded auto-rolls are
   available only if you enable them for a combat, and are recorded like any other roll.
 * **Reproducible** — every combat is `initial state + command log`; undo and replay verification are built in.
-* **Tactical analysis** — evaluation bar with factor breakdown, best 3-action turn (expectiminimax),
+* **Tactical analysis** — evaluation bar with factor breakdown, best 3-action turn (expectiminimax)
+  that always commits to a concrete turn, with an alternate plan, expected damage, expected status
+  effects, priority target, chance to down it and resulting position,
   strongest target, best spell, monster strategy, Monte Carlo TPK probability.
 
 ## Quick start

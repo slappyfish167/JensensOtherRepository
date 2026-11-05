@@ -99,10 +99,32 @@ pub fn scripted_action(s: &CombatState) -> Option<Action> {
         return Some(act);
     }
     // Close in: first movement candidate is the best approach square.
-    candidates(s, &MoveGenConfig { max_moves: 1, focus: None })
+    let approach = candidates(s, &MoveGenConfig { max_moves: 1, focus: None, committed: false })
         .into_iter()
         .find(|c| matches!(c, Action::Stride { .. }))
-        .filter(|_| a.attacks_this_turn == 0)
+        .filter(|_| a.attacks_this_turn == 0);
+    if approach.is_some() || a.side != Side::Enemy {
+        return approach;
+    }
+    // Hostile creatures never idle while a legal action remains: take the
+    // best remaining attack on a standing foe, else shore up defence, else
+    // anything legal.
+    let attack = legal
+        .iter()
+        .filter_map(|act| match act {
+            Action::Strike { actor_strike, target, .. } => {
+                let t = s.combatant(*target)?;
+                (!t.is_down()).then(|| (expected_strike(s, actor, *target, *actor_strike, a.attacks_this_turn, CoverLevel::None), act))
+            }
+            Action::Demoralize { target } | Action::Trip { target } => s.combatant(*target).filter(|t| !t.is_down()).map(|_| (0.1, act)),
+            _ => None,
+        })
+        .filter(|(v, _)| *v > 0.0)
+        .max_by(|x, y| x.0.partial_cmp(&y.0).unwrap_or(std::cmp::Ordering::Equal))
+        .map(|(_, act)| act.clone());
+    attack
+        .or_else(|| legal.iter().find(|x| matches!(x, Action::RaiseShield | Action::TakeCover)).cloned())
+        .or_else(|| candidates(s, &MoveGenConfig { max_moves: 1, focus: None, committed: true }).into_iter().next())
 }
 
 pub fn simulate(initial: &CombatState, cfg: SimulationConfig) -> SimulationReport {

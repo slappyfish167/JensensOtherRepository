@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { api } from '../api/client';
 import type { Action, CombatView, Evaluation, SimulationReport, SpellAssessment, Strategy, TargetAssessment, TurnRecommendation } from '../api/types';
 import { evalText, nameOf } from '../lib/format';
+import { TacticalReportView } from './TacticalReportView';
 
 type Tab = 'eval' | 'best' | 'targets' | 'spells' | 'tpk' | 'strategy';
 
@@ -76,8 +77,7 @@ export function AnalysisPanel({ view, evaluation, onPlay }: Props) {
           </button>
           {best && (
             <div>
-              <p>{best.summary}</p>
-              <ol>{best.steps.map((s, i) => <li key={i}>{s}</li>)}</ol>
+              <TacticalReportView report={best.report} />
               <p className="muted small">{best.plan.nodes.toLocaleString()} nodes{best.plan.truncated ? ' (budget reached)' : ''} · gain {best.plan.gain >= 0 ? '+' : ''}{best.plan.gain.toFixed(2)}</p>
               {best.plan.actions[0] && ready && view.current_actor === best.plan.actor && (
                 <button className="primary" onClick={() => { onPlay(best.plan.actions[0]); setBest(null); }}>Play first action</button>
@@ -168,8 +168,8 @@ export function AnalysisPanel({ view, evaluation, onPlay }: Props) {
               {strategy.creatures.map((c) => (
                 <div key={c.combatant} className="strategy-creature">
                   <strong>{c.name}</strong>
-                  <div>{c.recommendation ? c.recommendation.steps.join(' → ') || 'hold position' : <span className="muted">cannot act</span>}</div>
-                  {c.preferred_targets[0] && <div className="muted small">prefers {c.preferred_targets.map((t) => t.name).join(' > ')}</div>}
+                  {c.recommendation ? <TacticalReportView report={c.recommendation.report} /> : <div className="muted">cannot act this round</div>}
+                  {c.preferred_targets[0] && <div className="muted small">target order: {c.preferred_targets.map((t) => t.name).join(' > ')}</div>}
                 </div>
               ))}
             </div>

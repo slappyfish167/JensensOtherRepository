@@ -292,10 +292,43 @@ export interface Evaluation {
   party: { hit_points: number; damage_per_round: number; standing: number; down: number };
   enemies: { hit_points: number; damage_per_round: number; standing: number; down: number };
 }
+export interface TargetOutcome { target: CombatantId; name: string; expected_damage: number; down_chance: number }
+export interface StatusExpectation { target: CombatantId; name: string; effect: string; probability: number }
+export interface TurnMetrics { expected_damage: number; expected_damage_taken: number; targets: TargetOutcome[]; status_effects: StatusExpectation[] }
+export interface AlternatePlan { actions: Action[]; expected_score: number; gain: number; metrics: TurnMetrics }
+export interface PlannedTurn {
+  actor: CombatantId;
+  actions: Action[];
+  expected_score: number;
+  baseline_score: number;
+  gain: number;
+  metrics: TurnMetrics;
+  alternate: AlternatePlan | null;
+  nodes: number;
+  truncated: boolean;
+}
+/** Always a concrete turn: empty `primary` only when the creature has no legal action. */
+export interface TacticalReport {
+  actor_name: string;
+  primary: string[];
+  alternate: string[];
+  alternate_note: string;
+  expected_damage: number;
+  expected_damage_taken: number;
+  expected_status_effects: StatusExpectation[];
+  priority_target: CombatantId | null;
+  priority_target_name: string | null;
+  down_chance: number;
+  position_score: number;
+  position: string;
+  reason: string;
+  text: string;
+}
 export interface TurnRecommendation {
-  plan: { actor: CombatantId; actions: Action[]; expected_score: number; baseline_score: number; gain: number; nodes: number; truncated: boolean };
+  plan: PlannedTurn;
   steps: string[];
   summary: string;
+  report: TacticalReport;
 }
 export interface TargetAssessment { target: CombatantId; name: string; hp: number; expected_damage: number; kill_probability: number; threat: number; priority: number; rationale: string }
 export interface SpellAssessment { action: Action; description: string; eval_gain: number; expected_enemy_damage: number; expected_ally_healing: number; kill_probability: number }

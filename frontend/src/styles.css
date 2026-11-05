@@ -177,3 +177,8 @@ details.gm summary { cursor: pointer; font-weight: 600; margin-bottom: 4px; }
   .page.split { grid-template-columns: 1fr; }
   .encounter-layout { grid-template-columns: 1fr; }
 }
+.tactics h4 { margin: 8px 0 2px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.04em; }
+.tactics ol { margin: 2px 0 4px; }
+.tactics dl { display: grid; grid-template-columns: max-content 1fr; gap: 2px 10px; margin: 8px 0 0; }
+.tactics dt { color: var(--muted); }
+.tactics dd { margin: 0; }

@@ -113,6 +113,8 @@ async fn full_combat_flow_with_replay_and_undo() {
     let (s, bt) = call(&r, "POST", &format!("/api/combats/{id}/analysis/best-turn"), Some(json!({"node_budget": 3000}))).await;
     assert_eq!(s, StatusCode::OK, "{bt}");
     assert!(bt["summary"].is_string());
+    assert!(bt["report"]["text"].as_str().unwrap().contains("RECOMMENDED TURN"), "{bt}");
+    assert!(!bt["report"]["primary"].as_array().unwrap().is_empty(), "the acting creature has legal actions: {bt}");
 
     let (_, rp) = call(&r, "GET", &format!("/api/combats/{id}/replay"), None).await;
     assert_eq!(rp["identical"], true);
