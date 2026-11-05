@@ -5,3 +5,4 @@ frontend/dist
 *.sqlite-journal
 *.db
 .env
+*.tsbuildinfo
