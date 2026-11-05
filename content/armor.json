@@ -1,0 +1,10 @@
+[
+  { "id": "explorers-clothing", "name": "Explorer's Clothing", "category": "unarmored", "ac_bonus": 0, "dex_cap": 5 },
+  { "id": "leather", "name": "Leather Armor", "category": "light", "ac_bonus": 1, "dex_cap": 4, "check_penalty": 1, "strength": 0 },
+  { "id": "studded-leather", "name": "Studded Leather Armor", "category": "light", "ac_bonus": 2, "dex_cap": 3, "check_penalty": 1, "strength": 1 },
+  { "id": "chain-shirt", "name": "Chain Shirt", "category": "light", "ac_bonus": 2, "dex_cap": 3, "check_penalty": 1, "strength": 1 },
+  { "id": "scale-mail", "name": "Scale Mail", "category": "medium", "ac_bonus": 3, "dex_cap": 2, "check_penalty": 2, "speed_penalty": 5, "strength": 2 },
+  { "id": "breastplate", "name": "Breastplate", "category": "medium", "ac_bonus": 4, "dex_cap": 1, "check_penalty": 2, "speed_penalty": 5, "strength": 3 },
+  { "id": "half-plate", "name": "Half Plate", "category": "heavy", "ac_bonus": 5, "dex_cap": 1, "check_penalty": 3, "speed_penalty": 10, "strength": 3 },
+  { "id": "full-plate", "name": "Full Plate", "category": "heavy", "ac_bonus": 6, "dex_cap": 0, "check_penalty": 3, "speed_penalty": 10, "strength": 4 }
+]

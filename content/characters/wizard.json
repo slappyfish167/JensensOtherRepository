@@ -1,0 +1,23 @@
+{
+  "id": "sample-wizard", "name": "Ezren Vale", "level": 1,
+  "ancestry_id": "elf", "background_id": "scholar", "class_id": "wizard",
+  "boosts": {
+    "ancestry_free": ["wisdom"],
+    "background": ["intelligence", "dexterity"],
+    "class_key": "intelligence",
+    "level1_free": ["intelligence", "dexterity", "constitution", "wisdom"]
+  },
+  "trained_skills": ["occultism", "society", "crafting", "nature", "medicine", "diplomacy"],
+  "feats": [
+    {"feat_id": "widen-spell", "slot_type": "class", "slot_level": 1},
+    {"feat_id": "elven-lore", "slot_type": "ancestry", "slot_level": 1}
+  ],
+  "equipment": {
+    "weapons": [{"weapon_id": "staff"}],
+    "armor": {"armor_id": "explorers-clothing"}
+  },
+  "spells": {
+    "cantrips": ["electric-arc", "ignition"],
+    "spells": [{"spell_id": "force-barrage", "rank": 1}, {"spell_id": "fear", "rank": 1}]
+  }
+}

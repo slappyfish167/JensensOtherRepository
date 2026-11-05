@@ -1,0 +1,8 @@
+[
+  { "id": "acolyte", "name": "Acolyte", "boost_options": ["intelligence", "wisdom"], "trained_skills": ["religion"] },
+  { "id": "criminal", "name": "Criminal", "boost_options": ["dexterity", "intelligence"], "trained_skills": ["stealth"] },
+  { "id": "guard", "name": "Guard", "boost_options": ["strength", "charisma"], "trained_skills": ["intimidation"], "skill_feat": "intimidating-glare" },
+  { "id": "scholar", "name": "Scholar", "boost_options": ["intelligence", "wisdom"], "trained_skills": ["arcana"] },
+  { "id": "warrior", "name": "Warrior", "boost_options": ["strength", "constitution"], "trained_skills": ["athletics"] },
+  { "id": "field-medic", "name": "Field Medic", "boost_options": ["constitution", "wisdom"], "trained_skills": ["medicine"], "skill_feat": "battle-medicine" }
+]

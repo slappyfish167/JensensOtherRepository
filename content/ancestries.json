@@ -1,0 +1,16 @@
+[
+  { "id": "human", "name": "Human", "hp": 8, "size": "medium", "speed": 25,
+    "boosts": ["free", "free"], "flaws": [], "traits": ["human", "humanoid"], "vision": "normal" },
+  { "id": "dwarf", "name": "Dwarf", "hp": 10, "size": "medium", "speed": 20,
+    "boosts": [{"fixed": "constitution"}, {"fixed": "wisdom"}, "free"], "flaws": ["charisma"],
+    "traits": ["dwarf", "humanoid"], "vision": "darkvision" },
+  { "id": "elf", "name": "Elf", "hp": 6, "size": "medium", "speed": 30,
+    "boosts": [{"fixed": "dexterity"}, {"fixed": "intelligence"}, "free"], "flaws": ["constitution"],
+    "traits": ["elf", "humanoid"], "vision": "low-light" },
+  { "id": "goblin", "name": "Goblin", "hp": 6, "size": "small", "speed": 25,
+    "boosts": [{"fixed": "dexterity"}, {"fixed": "charisma"}, "free"], "flaws": ["wisdom"],
+    "traits": ["goblin", "humanoid"], "vision": "darkvision" },
+  { "id": "halfling", "name": "Halfling", "hp": 6, "size": "small", "speed": 25,
+    "boosts": [{"fixed": "dexterity"}, {"fixed": "wisdom"}, "free"], "flaws": ["strength"],
+    "traits": ["halfling", "humanoid"], "vision": "normal" }
+]

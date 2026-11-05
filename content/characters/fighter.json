@@ -1,0 +1,20 @@
+{
+  "id": "sample-fighter", "name": "Kira Ironhand", "level": 1,
+  "ancestry_id": "human", "background_id": "warrior", "class_id": "fighter",
+  "boosts": {
+    "ancestry_free": ["strength", "constitution"],
+    "background": ["strength", "dexterity"],
+    "class_key": "strength",
+    "level1_free": ["strength", "dexterity", "constitution", "wisdom"]
+  },
+  "trained_skills": ["acrobatics", "intimidation", "survival"],
+  "feats": [
+    {"feat_id": "sudden-charge", "slot_type": "class", "slot_level": 1},
+    {"feat_id": "natural-ambition", "slot_type": "ancestry", "slot_level": 1}
+  ],
+  "equipment": {
+    "weapons": [{"weapon_id": "longsword"}, {"weapon_id": "shortbow"}],
+    "armor": {"armor_id": "scale-mail"},
+    "shield_id": "steel-shield"
+  }
+}

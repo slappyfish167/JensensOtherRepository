@@ -1,0 +1,17 @@
+[
+  { "id": "fist", "name": "Fist", "category": "unarmed", "group": "brawling", "damage_die": 4, "damage_type": "bludgeoning", "traits": ["agile", "finesse", "nonlethal"] },
+  { "id": "dagger", "name": "Dagger", "category": "simple", "group": "knife", "damage_die": 4, "damage_type": "piercing", "traits": ["agile", "finesse", "thrown-10", "versatile-s"] },
+  { "id": "mace", "name": "Mace", "category": "simple", "group": "club", "damage_die": 6, "damage_type": "bludgeoning", "traits": ["shove"] },
+  { "id": "spear", "name": "Spear", "category": "simple", "group": "spear", "damage_die": 6, "damage_type": "piercing", "traits": ["thrown-20"] },
+  { "id": "staff", "name": "Staff", "category": "simple", "group": "club", "damage_die": 4, "damage_type": "bludgeoning", "traits": ["two-hand-d8"] },
+  { "id": "crossbow", "name": "Crossbow", "category": "simple", "group": "bow", "damage_die": 8, "damage_type": "piercing", "hands": 2, "range_increment": 120 },
+  { "id": "longsword", "name": "Longsword", "category": "martial", "group": "sword", "damage_die": 8, "damage_type": "slashing", "traits": ["versatile-p"] },
+  { "id": "shortsword", "name": "Shortsword", "category": "martial", "group": "sword", "damage_die": 6, "damage_type": "piercing", "traits": ["agile", "finesse", "versatile-s"] },
+  { "id": "rapier", "name": "Rapier", "category": "martial", "group": "sword", "damage_die": 6, "damage_type": "piercing", "traits": ["deadly-d8", "disarm", "finesse"] },
+  { "id": "greatsword", "name": "Greatsword", "category": "martial", "group": "sword", "damage_die": 12, "damage_type": "slashing", "hands": 2, "traits": ["versatile-p"] },
+  { "id": "greataxe", "name": "Greataxe", "category": "martial", "group": "axe", "damage_die": 12, "damage_type": "slashing", "hands": 2, "traits": ["sweep"] },
+  { "id": "glaive", "name": "Glaive", "category": "martial", "group": "polearm", "damage_die": 8, "damage_type": "slashing", "hands": 2, "traits": ["deadly-d8", "forceful", "reach-10"] },
+  { "id": "pick", "name": "Pick", "category": "martial", "group": "pick", "damage_die": 6, "damage_type": "piercing", "traits": ["fatal-d10"] },
+  { "id": "shortbow", "name": "Shortbow", "category": "martial", "group": "bow", "damage_die": 6, "damage_type": "piercing", "hands": 2, "range_increment": 60, "traits": ["deadly-d10"] },
+  { "id": "longbow", "name": "Longbow", "category": "martial", "group": "bow", "damage_die": 8, "damage_type": "piercing", "hands": 2, "range_increment": 100, "traits": ["deadly-d10", "volley-30"] }
+]

@@ -1,0 +1,11 @@
+[package]
+name = "pf2e-ai"
+description = "Optional tactical layer: position evaluation, expectimax turn search, Monte Carlo outcome estimation."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+pf2e-core.workspace = true
+serde.workspace = true
+serde_json.workspace = true

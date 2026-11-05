@@ -1,0 +1,20 @@
+{
+  "id": "sample-rogue", "name": "Pip Quickfoot", "level": 1,
+  "ancestry_id": "halfling", "background_id": "criminal", "class_id": "rogue",
+  "boosts": {
+    "ancestry_free": ["intelligence"],
+    "background": ["dexterity", "charisma"],
+    "class_key": "dexterity",
+    "level1_free": ["dexterity", "constitution", "intelligence", "charisma"]
+  },
+  "trained_skills": ["acrobatics", "athletics", "deception", "diplomacy", "intimidation", "thievery", "society", "occultism", "crafting"],
+  "feats": [
+    {"feat_id": "nimble-dodge", "slot_type": "class", "slot_level": 1},
+    {"feat_id": "halfling-luck", "slot_type": "ancestry", "slot_level": 1},
+    {"feat_id": "titan-wrestler", "slot_type": "skill", "slot_level": 1}
+  ],
+  "equipment": {
+    "weapons": [{"weapon_id": "rapier"}, {"weapon_id": "shortbow"}],
+    "armor": {"armor_id": "leather"}
+  }
+}

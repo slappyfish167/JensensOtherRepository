@@ -1,0 +1,182 @@
+use crate::evaluation::{Evaluator, HeuristicEvaluator};
+use crate::queries::{rank_spells, rank_targets, recommend_turn, side_strategy};
+use crate::search::{best_turn, SearchConfig};
+use crate::simulate::{simulate, SimulationConfig};
+use pf2e_core::builder::content::Content;
+use pf2e_core::combat::{Action, CombatSetup, CombatState, CombatantKind, Command, SetupParticipant};
+use pf2e_core::damage::DamageType;
+use pf2e_core::grid::Pos;
+use pf2e_core::models::battlefield::Battlefield;
+use pf2e_core::models::statblock::{DamageComponent, Statblock, StrikeProfile, StrikeRange};
+use pf2e_core::stats::{Attribute, Side};
+use pf2e_core::CombatantId;
+
+fn sb(name: &str, hp: i32, ac: i32, attack: i32, damage: &str) -> Statblock {
+    Statblock {
+        name: name.into(),
+        level: 1,
+        traits: vec![],
+        size: Default::default(),
+        attributes: Default::default(),
+        max_hp: hp,
+        ac,
+        fortitude: 5,
+        reflex: 5,
+        will: 5,
+        perception: 0,
+        speed: 25,
+        skills: Default::default(),
+        strikes: vec![StrikeProfile {
+            name: "Blade".into(),
+            attack_bonus: attack,
+            damage: vec![DamageComponent { dice: damage.parse().unwrap(), damage_type: DamageType::Slashing, precision: false }],
+            traits: vec![],
+            range: StrikeRange::Melee { reach_ft: 5 },
+            attribute: Attribute::Strength,
+            strength_damage: true,
+        }],
+        spellcasting: vec![],
+        iwr: Default::default(),
+        reactions: vec![],
+        shield: None,
+        class_dc: None,
+        damage_riders: vec![],
+        initiative_bonus: 0,
+        uses_dying_rules: false,
+        hazard: None,
+    }
+}
+
+fn p(sb: Statblock, side: Side, x: i32, y: i32) -> SetupParticipant {
+    SetupParticipant {
+        name: sb.name.clone(),
+        side,
+        kind: if side == Side::Party { CombatantKind::Character } else { CombatantKind::Monster },
+        statblock: sb,
+        position: Pos::new(x, y),
+        current_hp: None,
+    }
+}
+
+fn state(parts: Vec<SetupParticipant>) -> CombatState {
+    CombatSetup::default().build(Battlefield::open(14, 14), parts, &Content::bundled().unwrap()).unwrap()
+}
+
+fn start(s: &mut CombatState, inits: &[i32]) {
+    s.apply(&Command::StartCombat).unwrap();
+    for &v in inits {
+        let id = s.pending().unwrap().request_id();
+        s.apply(&Command::ProvideRoll { request_id: id, value: v, extra_modifier: 0 }).unwrap();
+    }
+}
+
+#[test]
+fn mirrored_sides_evaluate_to_zero() {
+    let s = state(vec![
+        p(sb("A", 30, 18, 9, "1d8+4"), Side::Party, 2, 2),
+        p(sb("B", 30, 18, 9, "1d8+4"), Side::Enemy, 8, 8),
+    ]);
+    let e = HeuristicEvaluator::default().evaluate_detailed(&s);
+    assert!(e.score.abs() < 1e-6, "{}", e.score);
+    assert!((e.win_probability - 0.5).abs() < 1e-6);
+}
+
+#[test]
+fn stronger_party_scores_positive_and_bounded() {
+    let s = state(vec![
+        p(sb("A", 60, 20, 12, "2d8+6"), Side::Party, 2, 2),
+        p(sb("B", 15, 14, 5, "1d6"), Side::Enemy, 8, 8),
+    ]);
+    let ev = HeuristicEvaluator::default();
+    let score = ev.evaluate(&s);
+    assert!(score > 5.0 && score <= 10.0, "{score}");
+    let flipped = state(vec![
+        p(sb("A", 15, 14, 5, "1d6"), Side::Party, 2, 2),
+        p(sb("B", 60, 20, 12, "2d8+6"), Side::Enemy, 8, 8),
+    ]);
+    assert!((ev.evaluate(&flipped) + score).abs() < 1e-6, "evaluation is antisymmetric");
+}
+
+#[test]
+fn search_finishes_the_wounded_enemy() {
+    let mut s = state(vec![
+        p(sb("Hero", 40, 18, 10, "1d8+4"), Side::Party, 5, 5),
+        p(sb("Healthy", 40, 16, 8, "1d8+3"), Side::Enemy, 6, 5),
+        p(sb("Wounded", 40, 16, 8, "1d8+3"), Side::Enemy, 4, 5),
+    ]);
+    start(&mut s, &[20, 1, 1]);
+    s.combatants[2].hp = 4;
+    let before = s.clone();
+    let plan = best_turn(&s, &HeuristicEvaluator::default(), SearchConfig::default()).unwrap();
+    assert_eq!(s, before, "search must not mutate the real state");
+    match &plan.actions[0] {
+        Action::Strike { target, .. } => assert_eq!(*target, CombatantId(3)),
+        other => panic!("expected a Strike on the wounded enemy, got {other:?}"),
+    }
+    assert!(plan.gain > 0.0);
+}
+
+#[test]
+fn search_closes_distance_when_out_of_reach() {
+    let mut s = state(vec![
+        p(sb("Hero", 40, 18, 10, "1d8+4"), Side::Party, 1, 1),
+        p(sb("Orc", 30, 16, 8, "1d8+3"), Side::Enemy, 5, 1),
+    ]);
+    start(&mut s, &[20, 1]);
+    let rec = recommend_turn(&s, SearchConfig::default()).unwrap();
+    assert!(matches!(rec.plan.actions[0], Action::Stride { .. }), "{:?}", rec.steps);
+    assert!(rec.plan.actions.iter().any(|a| matches!(a, Action::Strike { .. })), "{:?}", rec.steps);
+}
+
+#[test]
+fn targets_ranked_by_threat_and_fragility() {
+    let mut s = state(vec![
+        p(sb("Hero", 40, 18, 10, "1d8+4"), Side::Party, 5, 5),
+        p(sb("Brute", 60, 16, 12, "2d10+6"), Side::Enemy, 6, 5),
+        p(sb("Weakling", 8, 14, 4, "1d4"), Side::Enemy, 4, 5),
+        p(sb("Glass Cannon", 10, 14, 12, "2d10+6"), Side::Enemy, 5, 6),
+    ]);
+    start(&mut s, &[20, 1, 1, 1]);
+    let ranks = rank_targets(&s, CombatantId(1));
+    assert_eq!(ranks[0].name, "Glass Cannon", "{:?}", ranks.iter().map(|r| (&r.name, r.priority)).collect::<Vec<_>>());
+    assert!(ranks.iter().all(|r| (0.0..=1.0).contains(&r.kill_probability)));
+}
+
+#[test]
+fn monte_carlo_is_reproducible_and_sensible() {
+    let s = state(vec![
+        p(sb("Hero", 60, 20, 14, "2d8+6"), Side::Party, 2, 2),
+        p(sb("Rat", 8, 12, 3, "1d4"), Side::Enemy, 6, 2),
+    ]);
+    let cfg = SimulationConfig { runs: 30, seed: 9, max_rounds: 10 };
+    let a = simulate(&s, cfg);
+    let b = simulate(&s, cfg);
+    assert_eq!(serde_json::to_string(&a).unwrap(), serde_json::to_string(&b).unwrap());
+    assert!(a.party_win_rate > 0.9, "{a:?}");
+    assert!(a.tpk_probability < 0.1);
+}
+
+#[test]
+fn spell_ranking_for_a_caster() {
+    let content = Content::bundled().unwrap();
+    let adept = content.monsters.iter().find(|m| m.id == "cult-adept").unwrap().statblock.clone();
+    let mut s = CombatSetup::default()
+        .build(
+            Battlefield::open(14, 14),
+            vec![
+                p(sb("Hero", 30, 16, 9, "1d8+4"), Side::Party, 2, 2),
+                SetupParticipant { name: "Adept".into(), side: Side::Enemy, kind: CombatantKind::Monster, statblock: adept, position: Pos::new(6, 2), current_hp: None },
+            ],
+            &content,
+        )
+        .unwrap();
+    start(&mut s, &[1, 20]);
+    let spells = rank_spells(&s);
+    assert!(!spells.is_empty());
+    assert!(spells.windows(2).all(|w| w[0].eval_gain >= w[1].eval_gain));
+    let lance = spells.iter().find(|x| x.description.contains("Divine Lance")).unwrap();
+    assert!(lance.expected_enemy_damage > 0.0);
+    let strat = side_strategy(&s, Side::Enemy, SearchConfig { node_budget: 5_000, ..Default::default() });
+    assert_eq!(strat.focus_target, Some(CombatantId(1)));
+    assert!(strat.creatures[0].recommendation.is_some());
+}

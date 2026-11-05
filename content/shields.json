@@ -1,0 +1,4 @@
+[
+  { "id": "wooden-shield", "name": "Wooden Shield", "ac_bonus": 2, "hardness": 3, "hp": 12, "broken_threshold": 6 },
+  { "id": "steel-shield", "name": "Steel Shield", "ac_bonus": 2, "hardness": 5, "hp": 20, "broken_threshold": 10 }
+]

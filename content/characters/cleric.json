@@ -1,0 +1,23 @@
+{
+  "id": "sample-cleric", "name": "Brother Odo", "level": 1,
+  "ancestry_id": "dwarf", "background_id": "acolyte", "class_id": "cleric",
+  "boosts": {
+    "ancestry_free": ["strength"],
+    "background": ["wisdom", "constitution"],
+    "class_key": "wisdom",
+    "level1_free": ["strength", "constitution", "wisdom", "charisma"]
+  },
+  "trained_skills": ["medicine", "diplomacy"],
+  "feats": [
+    {"feat_id": "dwarven-lore", "slot_type": "ancestry", "slot_level": 1}
+  ],
+  "equipment": {
+    "weapons": [{"weapon_id": "mace"}, {"weapon_id": "crossbow"}],
+    "armor": {"armor_id": "chain-shirt"},
+    "shield_id": "wooden-shield"
+  },
+  "spells": {
+    "cantrips": ["divine-lance", "void-warp"],
+    "spells": [{"spell_id": "heal", "rank": 1}, {"spell_id": "bless", "rank": 1}]
+  }
+}

@@ -1,0 +1,117 @@
+[
+  { "id": "bandit-thug", "source": "pf2e-engine sample (original)", "tags": ["humanoid", "human"],
+    "description": "A hired brawler with a club and throwing knives.",
+    "statblock": {
+      "name": "Bandit Thug", "level": 1, "traits": ["human", "humanoid"], "size": "medium",
+      "attributes": {"strength": 4, "dexterity": 2, "constitution": 2, "intelligence": 0, "wisdom": 1, "charisma": 0},
+      "max_hp": 20, "ac": 16, "fortitude": 9, "reflex": 7, "will": 5, "perception": 6, "speed": 25,
+      "skills": {"athletics": 8, "intimidation": 5},
+      "strikes": [
+        {"name": "Club", "attack_bonus": 9, "damage": [{"dice": "1d6+4", "damage_type": "bludgeoning"}], "range": {"kind": "melee", "reach_ft": 5}, "attribute": "strength", "strength_damage": true},
+        {"name": "Throwing Knife", "attack_bonus": 7, "damage": [{"dice": "1d4+4", "damage_type": "piercing"}], "traits": ["agile", "thrown-20"], "range": {"kind": "ranged", "increment_ft": 20}, "attribute": "dexterity", "strength_damage": true}
+      ]
+    }
+  },
+  { "id": "goblin-cutter", "source": "pf2e-engine sample (original)", "tags": ["humanoid", "goblin"],
+    "description": "A twitchy goblin skirmisher with a jagged blade and a shortbow.",
+    "statblock": {
+      "name": "Goblin Cutter", "level": -1, "traits": ["goblin", "humanoid"], "size": "small",
+      "attributes": {"strength": 0, "dexterity": 3, "constitution": 1, "intelligence": 0, "wisdom": -1, "charisma": 1},
+      "max_hp": 7, "ac": 15, "fortitude": 4, "reflex": 7, "will": 2, "perception": 3, "speed": 25,
+      "skills": {"acrobatics": 5, "stealth": 5},
+      "strikes": [
+        {"name": "Jagged Blade", "attack_bonus": 7, "damage": [{"dice": "1d6", "damage_type": "slashing"}], "traits": ["agile", "finesse", "backswing"], "range": {"kind": "melee", "reach_ft": 5}, "attribute": "dexterity", "strength_damage": true},
+        {"name": "Shortbow", "attack_bonus": 7, "damage": [{"dice": "1d6", "damage_type": "piercing"}], "traits": ["deadly-d10"], "range": {"kind": "ranged", "increment_ft": 60}, "attribute": "dexterity"}
+      ]
+    }
+  },
+  { "id": "bone-sentinel", "source": "pf2e-engine sample (original)", "tags": ["undead", "mindless"],
+    "description": "Animated bones bound to guard a crypt door.",
+    "statblock": {
+      "name": "Bone Sentinel", "level": 0, "traits": ["mindless", "undead"], "size": "medium",
+      "attributes": {"strength": 2, "dexterity": 3, "constitution": 0, "intelligence": -5, "wisdom": 0, "charisma": 0},
+      "max_hp": 14, "ac": 16, "fortitude": 4, "reflex": 8, "will": 4, "perception": 4, "speed": 25,
+      "strikes": [
+        {"name": "Rusted Blade", "attack_bonus": 7, "damage": [{"dice": "1d6+2", "damage_type": "slashing"}], "traits": ["forceful", "sweep"], "range": {"kind": "melee", "reach_ft": 5}, "attribute": "strength", "strength_damage": true},
+        {"name": "Claw", "attack_bonus": 7, "damage": [{"dice": "1d4+2", "damage_type": "slashing"}], "traits": ["agile"], "range": {"kind": "melee", "reach_ft": 5}, "attribute": "strength", "strength_damage": true}
+      ],
+      "iwr": {
+        "immunities": [{"type": "poison"}, {"type": "mental"}, {"type": "bleed"}],
+        "weaknesses": [{"applies_to": {"type": "vitality"}, "value": 5}, {"applies_to": {"type": "bludgeoning"}, "value": 2}],
+        "resistances": [{"applies_to": {"type": "piercing"}, "value": 3}, {"applies_to": {"type": "slashing"}, "value": 3}, {"applies_to": {"type": "cold"}, "value": 3}]
+      }
+    }
+  },
+  { "id": "ember-hound", "source": "pf2e-engine sample (original)", "tags": ["animal", "fire"],
+    "description": "A lean hound whose fur smoulders; its bite sears.",
+    "statblock": {
+      "name": "Ember Hound", "level": 1, "traits": ["animal", "fire"], "size": "medium",
+      "attributes": {"strength": 3, "dexterity": 3, "constitution": 2, "intelligence": -4, "wisdom": 1, "charisma": -2},
+      "max_hp": 20, "ac": 16, "fortitude": 8, "reflex": 9, "will": 5, "perception": 7, "speed": 40,
+      "skills": {"athletics": 7, "stealth": 7},
+      "strikes": [
+        {"name": "Jaws", "attack_bonus": 9, "damage": [{"dice": "1d8+3", "damage_type": "piercing"}, {"dice": "1d4", "damage_type": "fire"}], "range": {"kind": "melee", "reach_ft": 5}, "attribute": "strength", "strength_damage": true}
+      ],
+      "iwr": {"immunities": [{"type": "fire"}], "weaknesses": [{"applies_to": {"type": "cold"}, "value": 3}]}
+    }
+  },
+  { "id": "cave-brute", "source": "pf2e-engine sample (original)", "tags": ["giant", "humanoid"],
+    "description": "A hulking cave dweller swinging a stone-studded greatclub.",
+    "statblock": {
+      "name": "Cave Brute", "level": 3, "traits": ["giant", "humanoid"], "size": "large",
+      "attributes": {"strength": 5, "dexterity": 0, "constitution": 4, "intelligence": -2, "wisdom": 0, "charisma": -2},
+      "max_hp": 55, "ac": 17, "fortitude": 12, "reflex": 7, "will": 6, "perception": 7, "speed": 25,
+      "skills": {"athletics": 12, "intimidation": 7},
+      "strikes": [
+        {"name": "Greatclub", "attack_bonus": 12, "damage": [{"dice": "1d10+7", "damage_type": "bludgeoning"}], "traits": ["backswing", "reach-10", "shove"], "range": {"kind": "melee", "reach_ft": 10}, "attribute": "strength", "strength_damage": true},
+        {"name": "Javelin", "attack_bonus": 7, "damage": [{"dice": "1d6+7", "damage_type": "piercing"}], "traits": ["thrown-30"], "range": {"kind": "ranged", "increment_ft": 30}, "attribute": "dexterity", "strength_damage": true}
+      ],
+      "reactions": ["reactive_strike"]
+    }
+  },
+  { "id": "cult-adept", "source": "pf2e-engine sample (original)", "tags": ["humanoid", "human", "spellcaster"],
+    "description": "A zealot channelling void-tainted divine magic.",
+    "statblock": {
+      "name": "Cult Adept", "level": 2, "traits": ["human", "humanoid"], "size": "medium",
+      "attributes": {"strength": 0, "dexterity": 2, "constitution": 1, "intelligence": 0, "wisdom": 4, "charisma": 2},
+      "max_hp": 26, "ac": 16, "fortitude": 6, "reflex": 7, "will": 10, "perception": 9, "speed": 25,
+      "skills": {"religion": 9, "intimidation": 7},
+      "strikes": [
+        {"name": "Dagger", "attack_bonus": 8, "damage": [{"dice": "1d4+2", "damage_type": "piercing"}], "traits": ["agile", "finesse"], "range": {"kind": "melee", "reach_ft": 5}, "attribute": "dexterity"}
+      ],
+      "spellcasting": [
+        {"name": "Divine Prepared Spells", "tradition": "divine", "kind": "prepared", "attribute": "wisdom",
+         "attack_bonus": 10, "dc": 20, "slots": {"1": 3},
+         "spells": [{"spell_id": "fear", "rank": 1}, {"spell_id": "heal", "rank": 1}],
+         "cantrips": ["divine-lance", "void-warp"]}
+      ]
+    }
+  },
+  { "id": "spiked-pit", "source": "pf2e-engine sample (original)", "tags": ["hazard", "trap", "mechanical"],
+    "description": "A concealed pit lined with sharpened stakes. Simple hazard.",
+    "statblock": {
+      "name": "Spiked Pit", "level": 0, "traits": ["mechanical", "trap"],
+      "max_hp": 20, "ac": 10, "fortitude": 8, "reflex": 0, "will": 0, "perception": 0, "speed": 0,
+      "hazard": {
+        "complex": false, "stealth_dc": 18, "disable": [{"skill": "thievery", "dc": 15}],
+        "trigger_offsets": [{"x": 0, "y": 0}],
+        "trigger_effect": {"kind": "save", "save": "reflex", "dc": 17, "basic": true, "damage": {"dice": "2d6+3", "damage_type": "piercing"}},
+        "resets": false
+      }
+    }
+  },
+  { "id": "swinging-blade", "source": "pf2e-engine sample (original)", "tags": ["hazard", "trap", "mechanical", "complex"],
+    "description": "A pendulum blade that sweeps the corridor every round. Complex hazard that acts in initiative.",
+    "statblock": {
+      "name": "Swinging Blade", "level": 2, "traits": ["mechanical", "trap"],
+      "max_hp": 32, "ac": 18, "fortitude": 10, "reflex": 4, "will": 0, "perception": 0, "speed": 0,
+      "strikes": [
+        {"name": "Pendulum", "attack_bonus": 12, "damage": [{"dice": "2d8+4", "damage_type": "slashing"}], "range": {"kind": "melee", "reach_ft": 15}, "attribute": "strength"}
+      ],
+      "hazard": {
+        "complex": true, "stealth_dc": 20, "disable": [{"skill": "thievery", "dc": 18}],
+        "trigger_offsets": [], "resets": true
+      }
+    }
+  }
+]

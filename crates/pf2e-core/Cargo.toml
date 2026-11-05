@@ -1,0 +1,11 @@
+[package]
+name = "pf2e-core"
+description = "Deterministic Pathfinder 2e rules engine: models, checks, conditions, combat state machine, replay."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
