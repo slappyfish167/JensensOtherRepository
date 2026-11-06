@@ -264,20 +264,84 @@ export type CombatEvent =
 
 export type DiceMode = { mode: 'manual' } | { mode: 'seeded'; seed: number };
 
-export interface CombatView {
+/** Game system ids known to this UI. */
+export type SystemId = 'pf2e' | 'cpred';
+
+/**
+ * A combat of any system. `state`, `pending` and `events` are the system's
+ * own JSON (typed here for PF2e, which has a dedicated UI); `table`,
+ * `prompt` and `log` are system-neutral and drive the generic combat page.
+ */
+export interface CombatView<State = CombatState, Pending = PendingInput, Ev = CombatEvent> {
   id: string;
   name: string;
+  system: SystemId;
+  system_name: string;
   encounter_id: string | null;
   dice: DiceMode;
   status: string;
-  state: CombatState;
-  pending: PendingInput | null;
+  state: State;
+  pending: Pending | null;
   current_actor: CombatantId | null;
   command_count: number;
   fingerprint: string;
-  events: CombatEvent[];
+  events: Ev[];
+  log: string[];
+  table: TableView;
+  prompt: PromptView | null;
 }
-export interface CombatRecord { id: string; name: string; status: string; dice: DiceMode; created_at: number }
+/** A combat of a system without a dedicated UI. */
+export type AnyCombatView = CombatView<unknown, unknown, unknown>;
+export interface CombatRecord { id: string; name: string; system?: SystemId; status: string; dice: DiceMode; created_at: number }
+
+// ----- system-neutral views (tactics_core::view) -----
+export interface StatLine { label: string; value: string }
+export interface LegendEntry { glyph: string; class: string; label: string }
+export interface MapView { width: number; height: number; rows: string[]; legend: LegendEntry[]; square: string }
+export interface UnitView {
+  id: CombatantId;
+  name: string;
+  side: Side;
+  kind: 'pc' | 'npc' | 'hazard';
+  position: Pos;
+  squares: number;
+  hp: number;
+  max_hp: number;
+  temp_hp: number;
+  down: boolean;
+  dead: boolean;
+  statuses: string[];
+  stats: StatLine[];
+}
+export interface TableView {
+  system: SystemId;
+  system_name: string;
+  phase: { kind: 'setup' | 'rolling_initiative' | 'active' | 'ended'; winner?: Side | null };
+  round: number;
+  current_actor: CombatantId | null;
+  map: MapView;
+  combatants: UnitView[];
+  initiative: { combatant: CombatantId; value: number }[];
+  turn?: string | null;
+}
+export type InputSpec =
+  | { kind: 'die'; sides: number }
+  | { kind: 'total'; min: number; max: number }
+  | { kind: 'faces'; count: number; sides: number };
+export interface PromptView {
+  kind: 'roll' | 'decision';
+  request_id: number;
+  actor: CombatantId | null;
+  prompt: string;
+  expression: string;
+  input?: InputSpec | null;
+  breakdown: StatLine[];
+  accept_label?: string | null;
+  decline_label?: string | null;
+}
+export interface ActionView { action: unknown; description: string; group: string; move_to?: Pos | null }
+export interface SystemInfo { id: SystemId; name: string; features: string[]; sample_encounters?: { id: string; name: string }[] }
+export interface DocumentSummary { id: string; name: string; updated_at: number }
 
 export interface LegalAction { action: Action; description: string; cost: number }
 
@@ -292,10 +356,43 @@ export interface Evaluation {
   party: { hit_points: number; damage_per_round: number; standing: number; down: number };
   enemies: { hit_points: number; damage_per_round: number; standing: number; down: number };
 }
+export interface TargetOutcome { target: CombatantId; name: string; expected_damage: number; down_chance: number }
+export interface StatusExpectation { target: CombatantId; name: string; effect: string; probability: number }
+export interface TurnMetrics { expected_damage: number; expected_damage_taken: number; targets: TargetOutcome[]; status_effects: StatusExpectation[] }
+export interface AlternatePlan { actions: Action[]; expected_score: number; gain: number; metrics: TurnMetrics }
+export interface PlannedTurn {
+  actor: CombatantId;
+  actions: Action[];
+  expected_score: number;
+  baseline_score: number;
+  gain: number;
+  metrics: TurnMetrics;
+  alternate: AlternatePlan | null;
+  nodes: number;
+  truncated: boolean;
+}
+/** Always a concrete turn: empty `primary` only when the creature has no legal action. */
+export interface TacticalReport {
+  actor_name: string;
+  primary: string[];
+  alternate: string[];
+  alternate_note: string;
+  expected_damage: number;
+  expected_damage_taken: number;
+  expected_status_effects: StatusExpectation[];
+  priority_target: CombatantId | null;
+  priority_target_name: string | null;
+  down_chance: number;
+  position_score: number;
+  position: string;
+  reason: string;
+  text: string;
+}
 export interface TurnRecommendation {
-  plan: { actor: CombatantId; actions: Action[]; expected_score: number; baseline_score: number; gain: number; nodes: number; truncated: boolean };
+  plan: PlannedTurn;
   steps: string[];
   summary: string;
+  report: TacticalReport;
 }
 export interface TargetAssessment { target: CombatantId; name: string; hp: number; expected_damage: number; kill_probability: number; threat: number; priority: number; rationale: string }
 export interface SpellAssessment { action: Action; description: string; eval_gain: number; expected_enemy_damage: number; expected_ally_healing: number; kill_probability: number }

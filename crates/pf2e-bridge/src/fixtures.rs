@@ -5,7 +5,7 @@ use pf2e_core::builder::{build, content::Content};
 use pf2e_core::combat::{CombatSetup, CombatState, CombatantKind, Command, PendingInput, Phase, SetupParticipant};
 use pf2e_core::models::encounter::{Encounter, ParticipantSource};
 use pf2e_core::models::Character;
-use pf2e_core::rng::SeededDice;
+use pf2e_core::rng::{AnswerRoll, SeededDice};
 use std::collections::HashMap;
 
 const CHARACTERS: [&str; 4] = [

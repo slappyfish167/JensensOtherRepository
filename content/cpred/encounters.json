@@ -1,0 +1,38 @@
+[
+  {
+    "id": "warehouse-standoff",
+    "name": "Warehouse Standoff",
+    "notes": "A deal in a dockside warehouse goes wrong. Crates (%) give cover, spilled coolant (~) is slippery.",
+    "battlefield": {
+      "width": 20, "height": 14,
+      "map": [
+        "####################",
+        "#..................#",
+        "#..%....~~.....%...#",
+        "#..%....~~.........#",
+        "#.......##....%....#",
+        "#...%...##.........#",
+        "#..........%.......#",
+        "#......%...........#",
+        "#.........##...%...#",
+        "#...%.....##.......#",
+        "#..........~~...%..#",
+        "#......%...~~......#",
+        "#..................#",
+        "####################"
+      ],
+      "notes": "# wall, % crate (cover, 20 HP), ~ coolant spill (difficult). One square = 2 m."
+    },
+    "participants": [
+      {"actor_id": "vex",           "side": "party", "position": {"x": 2, "y": 6}},
+      {"actor_id": "juno-okafor",   "side": "party", "position": {"x": 2, "y": 8}},
+      {"actor_id": "moth",          "side": "party", "position": {"x": 1, "y": 10}},
+      {"actor_id": "rook-haldane",  "side": "party", "position": {"x": 5, "y": 7}},
+      {"actor_id": "street-ganger", "side": "enemy", "position": {"x": 16, "y": 3}},
+      {"actor_id": "street-ganger", "side": "enemy", "position": {"x": 17, "y": 6}},
+      {"actor_id": "corp-security", "side": "enemy", "position": {"x": 15, "y": 9}},
+      {"actor_id": "gang-heavy",    "side": "enemy", "position": {"x": 13, "y": 7}},
+      {"actor_id": "gang-boss",     "side": "enemy", "position": {"x": 17, "y": 11}}
+    ]
+  }
+]

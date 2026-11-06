@@ -1,26 +1,58 @@
 //! High-level tactical questions, each answered with data plus a short
 //! human-readable rationale.
 
-use crate::analysis::{engagement_factor, expected_strike, round_damage};
+use crate::analysis::expected_strike;
 use crate::evaluation::{Evaluator, HeuristicEvaluator};
-use crate::search::{best_turn, expectation_after, PlannedTurn, SearchConfig, Searcher};
+use crate::search::{expectation_after, SearchConfig, Searcher};
+use crate::system::Pf2e;
 use pf2e_core::checks::{degree_distribution, DegreeOfSuccess};
 use pf2e_core::combat::pending::{AttackCtx, AttackSource};
 use pf2e_core::combat::rules;
 use pf2e_core::combat::{Action, CombatState};
-use pf2e_core::grid::CoverLevel;
+use pf2e_core::grid::{flanks, within_reach, CoverLevel, Pos};
+use pf2e_core::models::statblock::StrikeRange;
+use pf2e_core::stats::Side;
 use pf2e_core::CombatantId;
 use serde::{Deserialize, Serialize};
 
+/// Foes the actor would flank from `to` (an ally able to act already
+/// threatens the far side, and `to` is within the actor's melee reach).
+pub fn flanked_from(s: &CombatState, actor: CombatantId, to: Pos) -> Vec<String> {
+    let Some(a) = s.combatant(actor) else { return vec![] };
+    let reach = |c: &pf2e_core::combat::Combatant| {
+        c.statblock.strikes.iter().filter_map(|w| match w.range {
+            StrikeRange::Melee { reach_ft } => Some(reach_ft),
+            _ => None,
+        }).max()
+    };
+    let Some(my_reach) = reach(a) else { return vec![] };
+    s.combatants
+        .iter()
+        .filter(|f| a.side.is_hostile_to(f.side) && !f.is_down() && !f.is_hazard())
+        .filter(|f| within_reach(to, a.statblock.size, f.position, f.statblock.size, my_reach))
+        .filter(|f| {
+            s.combatants.iter().filter(|al| al.side == a.side && al.id != actor && al.can_act()).any(|al| {
+                reach(al).map(|r| within_reach(al.position, al.statblock.size, f.position, f.statblock.size, r)).unwrap_or(false)
+                    && flanks(to, a.statblock.size, al.position, al.statblock.size, f.position, f.statblock.size)
+            })
+        })
+        .map(|f| f.name.clone())
+        .collect()
+}
+
 pub fn describe_action(s: &CombatState, actor: CombatantId, a: &Action) -> String {
     let name = |id: &CombatantId| s.combatant(*id).map(|c| c.name.clone()).unwrap_or_else(|| id.to_string());
+    let flank = |to: &Pos| {
+        let f = flanked_from(s, actor, *to);
+        if f.is_empty() { String::new() } else { format!(", flanking {}", f.join(" and ")) }
+    };
     match a {
         Action::Strike { actor_strike, target, .. } => {
             let w = s.combatant(actor).and_then(|c| c.statblock.strikes.get(*actor_strike)).map(|w| w.name.clone()).unwrap_or_default();
             format!("Strike {} with {w}", name(target))
         }
-        Action::Stride { to } => format!("Stride to ({}, {})", to.x, to.y),
-        Action::Step { to } => format!("Step to ({}, {})", to.x, to.y),
+        Action::Stride { to } => format!("Stride to ({}, {}){}", to.x, to.y, flank(to)),
+        Action::Step { to } => format!("Step to ({}, {}){}", to.x, to.y, flank(to)),
         Action::Stand => "Stand".into(),
         Action::RaiseShield => "Raise a Shield".into(),
         Action::TakeCover => "Take Cover".into(),
@@ -41,80 +73,9 @@ pub fn describe_action(s: &CombatState, actor: CombatantId, a: &Action) -> Strin
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TurnRecommendation {
-    pub plan: PlannedTurn,
-    pub steps: Vec<String>,
-    pub summary: String,
-}
-
-pub fn recommend_turn(s: &CombatState, cfg: SearchConfig) -> Option<TurnRecommendation> {
-    let eval = HeuristicEvaluator::default();
-    let plan = best_turn(s, &eval, cfg)?;
-    let steps: Vec<String> = plan.actions.iter().map(|a| describe_action(s, plan.actor, a)).collect();
-    let who = s.combatant(plan.actor).map(|c| c.name.clone()).unwrap_or_default();
-    let summary = if steps.is_empty() {
-        format!("{who}: no action improves the position; end the turn")
-    } else {
-        format!(
-            "{who}: {} (evaluation {:+.1} → {:+.1})",
-            steps.join(", then "),
-            plan.baseline_score,
-            plan.expected_score
-        )
-    };
-    Some(TurnRecommendation { plan, steps, summary })
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TargetAssessment {
-    pub target: CombatantId,
-    pub name: String,
-    pub hp: i32,
-    /// Expected damage the attacker deals this turn if it focuses this target.
-    pub expected_damage: f64,
-    /// Probability of dropping the target this turn (strike-based estimate).
-    pub kill_probability: f64,
-    /// The target's own expected damage per round against the attacker's side.
-    pub threat: f64,
-    pub priority: f64,
-    pub rationale: String,
-}
-
-/// "What is the strongest target?" for `attacker` (any combatant).
-pub fn rank_targets(s: &CombatState, attacker: CombatantId) -> Vec<TargetAssessment> {
-    let Some(a) = s.combatant(attacker) else { return vec![] };
-    let actions = if s.current_actor() == Some(attacker) { a.actions_remaining } else { 3 };
-    let mut out = Vec::new();
-    for t in s.combatants.iter().filter(|t| a.side.is_hostile_to(t.side) && !t.is_down() && !t.is_hazard()) {
-        let engage = engagement_factor(s, attacker, t.id);
-        let expected = round_damage(s, attacker, t.id, true) * engage * actions as f64 / 3.0;
-        let kill = kill_probability(s, attacker, t.id, if engage < 1.0 { actions.saturating_sub(1) } else { actions });
-        let allies: Vec<_> = s.combatants.iter().filter(|c| c.side == a.side && !c.is_down() && !c.is_hazard()).collect();
-        let threat = if allies.is_empty() {
-            0.0
-        } else {
-            allies.iter().map(|al| round_damage(s, t.id, al.id, true)).sum::<f64>() / allies.len() as f64
-        };
-        // Damage that removes threat sooner is worth more: threat removed per HP.
-        let priority = threat * (kill + expected / t.hp.max(1) as f64);
-        let rationale = format!(
-            "{:.1} expected damage ({:.0}% of its {} HP), {:.0}% to drop it now, it threatens {:.1} damage/round",
-            expected,
-            100.0 * expected / t.hp.max(1) as f64,
-            t.hp,
-            100.0 * kill,
-            threat
-        );
-        out.push(TargetAssessment { target: t.id, name: t.name.clone(), hp: t.hp, expected_damage: expected, kill_probability: kill, threat, priority, rationale });
-    }
-    out.sort_by(|x, y| y.priority.partial_cmp(&x.priority).unwrap_or(std::cmp::Ordering::Equal));
-    out
-}
-
 /// P(total strike damage ≥ target HP) using `actions` Strikes with the best
 /// weapon at each MAP step, enumerating every degree combination.
-fn kill_probability(s: &CombatState, attacker: CombatantId, target: CombatantId, actions: u8) -> f64 {
+pub fn kill_probability(s: &CombatState, attacker: CombatantId, target: CombatantId, actions: u8) -> f64 {
     let a = s.combatant(attacker).expect("attacker");
     let t = s.combatant(target).expect("target");
     let mut dists: Vec<Vec<(f64, f64)>> = Vec::new(); // per strike: (prob, damage)
@@ -207,47 +168,22 @@ pub fn rank_spells(s: &CombatState) -> Vec<SpellAssessment> {
     out
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CreaturePlan {
-    pub combatant: CombatantId,
-    pub name: String,
-    pub recommendation: Option<TurnRecommendation>,
-    pub preferred_targets: Vec<TargetAssessment>,
+pub type TurnRecommendation = tactics_ai::TurnRecommendation<Action>;
+pub type CreaturePlan = tactics_ai::CreaturePlan<Action>;
+pub type Strategy = tactics_ai::Strategy<Action>;
+pub use tactics_ai::{TacticalReport, TargetAssessment};
+
+/// The best legal turn for whoever is acting, with the full tactical report.
+pub fn recommend_turn(s: &CombatState, cfg: SearchConfig) -> Option<TurnRecommendation> {
+    tactics_ai::recommend_turn::<Pf2e>(s, cfg)
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Strategy {
-    pub side: pf2e_core::stats::Side,
-    pub focus_target: Option<CombatantId>,
-    pub creatures: Vec<CreaturePlan>,
-    pub notes: Vec<String>,
+/// "What is the strongest target?" for `attacker` (any combatant).
+pub fn rank_targets(s: &CombatState, attacker: CombatantId) -> Vec<TargetAssessment> {
+    tactics_ai::rank_targets::<Pf2e>(s, attacker)
 }
 
-/// "What is the optimal monster strategy?" — each creature's best turn if it
-/// acted now, plus a shared focus-fire target.
-pub fn side_strategy(s: &CombatState, side: pf2e_core::stats::Side, cfg: SearchConfig) -> Strategy {
-    let mut creatures = Vec::new();
-    let mut votes: std::collections::BTreeMap<CombatantId, f64> = Default::default();
-    for c in s.combatants.iter().filter(|c| c.side == side && !c.is_down() && c.in_initiative) {
-        let targets = rank_targets(s, c.id);
-        for t in &targets {
-            *votes.entry(t.target).or_default() += t.priority;
-        }
-        let recommendation = if s.current_actor() == Some(c.id) && s.pending().is_none() {
-            recommend_turn(s, cfg)
-        } else {
-            s.hypothetical_turn(c.id).and_then(|h| recommend_turn(&h, cfg))
-        };
-        creatures.push(CreaturePlan { combatant: c.id, name: c.name.clone(), recommendation, preferred_targets: targets.into_iter().take(3).collect() });
-    }
-    let focus_target = votes.iter().max_by(|a, b| a.1.partial_cmp(b.1).unwrap_or(std::cmp::Ordering::Equal)).map(|(id, _)| *id);
-    let mut notes = Vec::new();
-    if let Some(f) = focus_target.and_then(|id| s.combatant(id)) {
-        notes.push(format!("Focus fire on {} ({} HP): it offers the best threat removed per point of damage.", f.name, f.hp));
-    }
-    let eval = HeuristicEvaluator::default().evaluate_detailed(s);
-    if let Some(top) = eval.factors.iter().max_by(|a, b| a.value.abs().partial_cmp(&b.value.abs()).unwrap_or(std::cmp::Ordering::Equal)) {
-        notes.push(format!("Biggest swing factor right now: {} ({:+.1}) — {}", top.name, top.value, top.detail));
-    }
-    Strategy { side, focus_target, creatures, notes }
+/// "What is the optimal monster strategy?" for one side.
+pub fn side_strategy(s: &CombatState, side: Side, cfg: SearchConfig) -> Strategy {
+    tactics_ai::side_strategy::<Pf2e>(s, side, cfg)
 }

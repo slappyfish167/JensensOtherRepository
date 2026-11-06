@@ -10,6 +10,10 @@ name = "pf2e-server"
 path = "src/main.rs"
 
 [dependencies]
+tactics-core.workspace = true
+tactics-ai.workspace = true
+cpred-core.workspace = true
+cpred-ai.workspace = true
 pf2e-core.workspace = true
 pf2e-ai.workspace = true
 pf2e-store.workspace = true

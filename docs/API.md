@@ -6,6 +6,21 @@ Rust models one-to-one (TypeScript mirrors: [`frontend/src/api/types.ts`](../fro
 Errors: `{ "error": "message", "details": … }` with status 400 (bad input), 404, 409 (conflict /
 wrong state) or 422 (rules violation: illegal action, impossible roll, wrong request id).
 
+## Game systems
+
+Every combat belongs to a game system: `pf2e` (Pathfinder 2e) or `cpred` (Cyberpunk RED). PF2e
+keeps its dedicated endpoints below (characters, monsters, encounters). Other systems use the
+generic document endpoints. All `/api/combats/...` endpoints work for every system.
+
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/api/systems` | `[{id, name, features, sample_encounters?}]` |
+| GET | `/api/systems/{system}/content` | rules data (`cpred`: weapons, armor, rules tables) |
+| GET / POST | `/api/systems/{system}/actors` | list `[{id, name, updated_at}]` / create (validated against the system's actor model) |
+| GET / PUT / DELETE | `/api/systems/{system}/actors/{id}` | one actor |
+| GET / POST | `/api/systems/{system}/encounters` | encounters; saving checks that the encounter builds a legal combat |
+| GET / PUT / DELETE | `/api/systems/{system}/encounters/{id}` | one encounter |
+
 ## Content & characters
 
 | Method | Path | Body → Response |
@@ -66,19 +81,42 @@ Map glyphs: `.` open, `~` difficult, `^` greater difficult, `#` wall, `%` obscur
 
 | Method | Path | Notes |
 |---|---|---|
-| POST | `/api/combats` | `{encounter_id, name?, dice?: {mode:"manual"} \| {mode:"seeded", seed}}` → `CombatView` |
+| POST | `/api/combats` | `{system?: "pf2e" \| "cpred", encounter_id \| encounter, name?, dice?: {mode:"manual"} \| {mode:"seeded", seed}}` → `CombatView` (`system` defaults to `pf2e`; `encounter` is an unsaved encounter of that system) |
 | GET | `/api/combats` | `CombatRecord[]` |
 | GET / DELETE | `/api/combats/{id}` | `CombatView` |
-| POST | `/api/combats/{id}/commands` | `Command` → `CombatView` (with this command's `events`) |
+| POST | `/api/combats/{id}/commands` | the system's `Command` → `CombatView` (with this command's `events` and `log`) |
 | POST | `/api/combats/{id}/auto-roll` | answer the pending roll with seeded dice (seeded combats only) |
 | POST | `/api/combats/{id}/undo` | drop the last command, replay |
 | GET | `/api/combats/{id}/log` | `CombatLog {initial, commands}` — everything needed to reproduce |
 | GET | `/api/combats/{id}/replay` | `{identical, commands, live_fingerprint, replayed_fingerprint}` |
-| GET | `/api/combats/{id}/legal-actions` | `[{action, description, cost}]` for the current creature (Strides omitted) |
+| GET | `/api/combats/{id}/legal-actions` | PF2e: `[{action, description, cost}]` for the current creature (Strides omitted); other systems: as `actions` |
+| GET | `/api/combats/{id}/actions` | any system: `ActionView[]` — `{action, description, group, move_to?}`; send `action` back in an `act` command |
 | GET | `/api/combats/{id}/movement/{combatant}` | reachable squares `[{x, y, cost}]` |
 
 `CombatView = { id, name, dice, status, state: CombatState, pending: PendingInput|null,
 current_actor, command_count, fingerprint, events }`
+
+### Combat view (every system)
+
+`CombatView` = `{id, name, system, system_name, encounter_id, dice, status, state, pending,
+current_actor, command_count, fingerprint, events, log, table, prompt}`.
+
+* `state`, `pending` and `events` are the system's own JSON (documented below for PF2e).
+* `table`, `prompt` and `log` are **system-neutral**, and are what the generic combat screen renders:
+  * `table`: `{system, phase, round, current_actor, map: {width, height, rows, legend, square},
+    combatants: [{id, name, side, kind, position, squares, hp, max_hp, temp_hp, down, dead,
+    statuses, stats}], initiative, turn}`.
+  * `prompt`: `{kind: "roll" | "decision", request_id, actor, prompt, expression,
+    input: {kind: "die", sides} | {kind: "total", min, max} | {kind: "faces", count, sides},
+    breakdown, accept_label?, decline_label?}`.
+  * `log`: the events in words.
+
+Cyberpunk RED commands have the same shape as PF2e's (`start_combat`, `act`, `end_turn`, `decide`,
+`gm`). `provide_roll` takes `faces: [..]` when the prompt asks for every die face (damage):
+
+```json
+{ "type": "provide_roll", "request_id": 12, "value": 16, "faces": [4, 6, 6], "extra_modifier": 0 }
+```
 
 ### Commands
 
@@ -121,9 +159,9 @@ Other actions: `step`, `stand`, `take_cover`, `demoralize {target}`, `trip {targ
 | Method | Path | Answers |
 |---|---|---|
 | GET | `/api/combats/{id}/analysis/evaluation` | position score −10…+10, win estimate, factor breakdown |
-| POST | `/api/combats/{id}/analysis/best-turn` | `{node_budget?, focus?}` → "What is the best 3-action turn?" |
+| POST | `/api/combats/{id}/analysis/best-turn` | `{node_budget?, focus?, allow_end_turn?}` → "What is the best 3-action turn?" (always a concrete turn; see below) |
 | GET | `/api/combats/{id}/analysis/targets?attacker=ID` | "What is the strongest target?" |
-| GET | `/api/combats/{id}/analysis/spells` | "Which spell maximizes expected value?" |
+| GET | `/api/combats/{id}/analysis/spells` | "Which spell maximizes expected value?" (PF2e; `[]` for systems without spells) |
 | POST | `/api/combats/{id}/analysis/tpk` | `{runs?, seed?, max_rounds?}` → "How likely is a TPK?" |
 | GET | `/api/combats/{id}/analysis/strategy?side=enemy` | "What is the optimal monster strategy?" |
 
@@ -131,7 +169,30 @@ Other actions: `step`, `stand`, `take_cover`, `demoralize {target}`, `trip {targ
 // POST …/analysis/best-turn
 { "summary": "Bone Sentinel: Stride to (5, 7), then Stride to (2, 8), then Strike Ezren Vale with Rusted Blade (evaluation +6.5 → +6.3)",
   "steps": ["Stride to (5, 7)", "Stride to (2, 8)", "Strike Ezren Vale with Rusted Blade"],
-  "plan": { "actor": 5, "actions": [ … ], "expected_score": 6.3, "baseline_score": 6.5, "gain": 0.2, "nodes": 18342, "truncated": false } }
+  "plan": { "actor": 5, "actions": [ … ], "expected_score": 6.3, "baseline_score": 6.5, "gain": 0.2,
+            "metrics": { "expected_damage": 4.2, "expected_damage_taken": 0.0, "targets": [ … ], "status_effects": [] },
+            "alternate": { "actions": [ … ], "expected_score": 6.5, "gain": 0.0, "metrics": { … } },
+            "nodes": 18342, "truncated": false },
+  "report": {
+    "actor_name": "Bone Sentinel",
+    "primary": ["Stride to (5, 7)", "Stride to (2, 8)", "Strike Ezren Vale with Rusted Blade"],
+    "alternate": ["Take Cover", "Stride to (5, 7)", "Demoralize Kira Ironhand"],
+    "alternate_note": "expected damage 0.0, 0% to down Kira Ironhand, position +6.5 Party Advantage",
+    "expected_damage": 4.2, "expected_damage_taken": 0.0, "expected_status_effects": [],
+    "priority_target": 4, "priority_target_name": "Ezren Vale", "down_chance": 0.10,
+    "position_score": -6.3, "position": "+6.3 Party Advantage",
+    "reason": "Ezren Vale has the lowest effective HP (12).",
+    "text": "RECOMMENDED TURN — Bone Sentinel\n\nAction 1: Stride to (5, 7).\n…" } }
 ```
+
+The engine **always commits to a turn**: `plan.actions` / `report.primary` is empty only when the
+acting creature literally has no legal action (it is down, paralyzed or out of actions), and the
+`reason` then says which. It never answers "no move improves the position". `report` always
+carries the primary plan, an alternate plan (when any other legal opening exists), expected damage,
+expected status effects (`{name, effect, probability}`, e.g. `frightened 1`, `prone`,
+`persistent bleed 1d6`), the priority target and the chance to down it, and the resulting position
+from the actor's side (`+0.3 Monster Advantage`). `report.text` is the same read-out as a printable
+block. `allow_end_turn: true` opts into advisory mode, where ending the turn early competes with
+acting. The strategy endpoint returns a `report` for each creature's recommendation as well.
 
 Analysis never modifies the live combat; it works on copies.

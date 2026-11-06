@@ -17,11 +17,15 @@ pub struct MoveGenConfig {
     pub max_moves: usize,
     /// Only keep actions involving this target (plus movement).
     pub focus: Option<CombatantId>,
+    /// Committed play (the default for search): also keep Take Cover, and if
+    /// pruning would leave nothing, fall back to raw legal actions, so a
+    /// creature with any legal action always has a candidate.
+    pub committed: bool,
 }
 
 impl Default for MoveGenConfig {
     fn default() -> Self {
-        MoveGenConfig { max_moves: 5, focus: None }
+        MoveGenConfig { max_moves: 5, focus: None, committed: true }
     }
 }
 
@@ -42,11 +46,11 @@ impl MoveGenCache {
         let key = legality_key(state, actor);
         if let Some((legal, mm)) = self.entries.get(&key) {
             self.hits += 1;
-            return candidates_from(state, cfg, legal.clone(), mm);
+            return candidates_from(state, cfg, legal, mm);
         }
         let legal = state.legal_actions();
         let mm = state.movement(actor);
-        let out = candidates_from(state, cfg, legal.clone(), &mm);
+        let out = candidates_from(state, cfg, &legal, &mm);
         if self.entries.len() >= Self::MAX_ENTRIES {
             self.entries.clear();
         }
@@ -57,14 +61,24 @@ impl MoveGenCache {
 
 pub fn candidates(state: &CombatState, cfg: &MoveGenConfig) -> Vec<Action> {
     let Some(actor) = state.current_actor() else { return vec![] };
-    candidates_from(state, cfg, state.legal_actions(), &state.movement(actor))
+    candidates_from(state, cfg, &state.legal_actions(), &state.movement(actor))
 }
 
 /// Prunes `all` (the engine's legal actions for the current actor, whose
 /// movement map is `mm`) to the tactically distinct candidates.
-pub fn candidates_from(state: &CombatState, cfg: &MoveGenConfig, all: Vec<Action>, mm: &MoveMap) -> Vec<Action> {
+pub fn candidates_from(state: &CombatState, cfg: &MoveGenConfig, all: &[Action], mm: &MoveMap) -> Vec<Action> {
     let Some(actor) = state.current_actor() else { return vec![] };
     let a = state.combatant(actor).expect("actor");
+    let mut out = prune(state, actor, a, all, mm, cfg);
+    if out.is_empty() && cfg.committed {
+        // Nothing tactically distinct survived pruning: any legal action
+        // beats returning no turn at all.
+        out.extend(all.iter().take(cfg.max_moves.max(1)).cloned());
+    }
+    out
+}
+
+fn prune(state: &CombatState, actor: CombatantId, a: &pf2e_core::combat::Combatant, all: &[Action], mm: &MoveMap, cfg: &MoveGenConfig) -> Vec<Action> {
     let foes: Vec<_> = state
         .combatants
         .iter()
@@ -74,7 +88,7 @@ pub fn candidates_from(state: &CombatState, cfg: &MoveGenConfig, all: Vec<Action
 
     let mut out: Vec<Action> = Vec::new();
     let mut strides: Vec<Pos> = Vec::new();
-    for act in all {
+    for act in all.iter().cloned() {
         match &act {
             Action::Stride { to } => strides.push(*to),
             Action::Step { to } => {
@@ -85,7 +99,11 @@ pub fn candidates_from(state: &CombatState, cfg: &MoveGenConfig, all: Vec<Action
                     out.push(act);
                 }
             }
-            Action::TakeCover => {}
+            Action::TakeCover => {
+                if cfg.committed {
+                    out.push(act);
+                }
+            }
             Action::Strike { target, .. } | Action::Demoralize { target } | Action::Trip { target } => {
                 if cfg.focus.map(|f| f == *target).unwrap_or(true) {
                     out.push(act);

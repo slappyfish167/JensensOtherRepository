@@ -1,0 +1,9 @@
+[
+  {"id": "leathers",         "name": "Leathers",         "sp": 4,  "penalty": 0},
+  {"id": "kevlar",           "name": "Kevlar",           "sp": 7,  "penalty": 0},
+  {"id": "light_armorjack",  "name": "Light Armorjack",  "sp": 11, "penalty": 0},
+  {"id": "medium_armorjack", "name": "Medium Armorjack", "sp": 12, "penalty": 2},
+  {"id": "heavy_armorjack",  "name": "Heavy Armorjack",  "sp": 13, "penalty": 2},
+  {"id": "flak",             "name": "Flak",             "sp": 15, "penalty": 4},
+  {"id": "metalgear",        "name": "Metalgear",        "sp": 18, "penalty": 4}
+]

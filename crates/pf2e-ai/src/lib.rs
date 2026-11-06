@@ -1,14 +1,17 @@
 //! # pf2e-ai
 //!
-//! Optional tactical layer on top of `pf2e-core`. It **contains no game
-//! rules**: it reads state, asks the engine for legal actions, and simulates
-//! by applying commands to cloned states. Removing this crate leaves a fully
-//! functional rules engine.
+//! The Pathfinder 2e adapter for the system-neutral analysis layer
+//! (`tactics-ai`). It **contains no game rules**: [`system::Pf2e`] exposes
+//! `pf2e-core` through the `GameSystem` / `TacticalSystem` contracts, and
+//! the expected-value helpers in [`analysis`] are built on core rule
+//! functions. Removing this crate leaves a fully functional rules engine.
 //!
-//! * [`evaluation`] — Stockfish-style −10..+10 score with factor breakdown.
-//! * [`search`] — expectiminimax over a creature's turn ("best 3-action turn").
-//! * [`queries`] — strongest target, best spell, side strategy.
-//! * [`simulate`] — Monte Carlo win/TPK probabilities.
+//! * [`system`] — the `Pf2e` adapter, including its exact search caches
+//!   ([`keys`] for transposition and pair keys, [`evaluation::EvalCache`]).
+//! * [`explain`] — natural-language explanations of positions and changes.
+//! * [`evaluation`], [`search`], [`queries`], [`simulate`] — PF2e entry
+//!   points to the generic evaluator, search, report and Monte Carlo, plus
+//!   PF2e-only questions (best spell).
 
 pub mod analysis;
 pub mod evaluation;
@@ -18,10 +21,12 @@ pub mod movegen;
 pub mod queries;
 pub mod search;
 pub mod simulate;
+pub mod system;
 
 pub use evaluation::{Evaluation, Evaluator, HeuristicEvaluator};
 pub use search::{best_turn, best_turn_with_budget, Budget, PlannedTurn, SearchConfig, Unlimited};
 pub use simulate::{simulate, simulate_range, SimulationConfig, SimulationReport, SimulationTally};
+pub use system::Pf2e;
 
 #[cfg(test)]
 mod tests;

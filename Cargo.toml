@@ -1,9 +1,13 @@
 [workspace]
 resolver = "2"
 members = [
+    "crates/tactics-core",
+    "crates/tactics-ai",
     "crates/pf2e-core",
     "crates/pf2e-ai",
     "crates/pf2e-store",
+    "crates/cpred-core",
+    "crates/cpred-ai",
     "crates/pf2e-server",
     "crates/pf2e-bridge",
     "crates/pf2e-wasm",
@@ -24,7 +28,11 @@ axum = "0.8"
 tokio = { version = "1", features = ["full"] }
 tower-http = { version = "0.7", features = ["cors", "fs"] }
 uuid = { version = "1", features = ["v4"] }
+tactics-core = { path = "crates/tactics-core" }
+tactics-ai = { path = "crates/tactics-ai" }
 pf2e-core = { path = "crates/pf2e-core" }
+cpred-core = { path = "crates/cpred-core" }
+cpred-ai = { path = "crates/cpred-ai" }
 pf2e-ai = { path = "crates/pf2e-ai" }
 pf2e-store = { path = "crates/pf2e-store" }
 pf2e-bridge = { path = "crates/pf2e-bridge" }
@@ -39,3 +47,8 @@ inherits = "release"
 lto = true
 codegen-units = 1
 opt-level = 3
+
+# The analysis tests run real expectiminimax searches and Monte Carlo
+# simulations; unoptimized they take minutes. Optimize test builds.
+[profile.test]
+opt-level = 2

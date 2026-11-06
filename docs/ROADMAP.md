@@ -13,6 +13,17 @@ Built so far (phase 1 — foundations):
 - [x] Evaluation (−10…+10 with factor breakdown), expectiminimax best turn, strongest target,
       spell ranking, monster strategy, Monte Carlo TPK odds
 - [x] SQLite storage (Postgres-compatible schema), REST API, React UI, automated tests
+- [x] Multiple game systems behind `GameSystem` / `TacticalSystem`: Pathfinder 2e and Cyberpunk RED
+      share the store, API, analysis layer (evaluation, committed search, tactical report, strategy,
+      Monte Carlo) and a system-neutral combat screen
+
+## Cyberpunk RED next steps
+
+1. Verify the **VERIFY** items in `cpred-core/src/rules.rs` against the rulebook (DV tables, wound
+   thresholds, dodge and death-save details) and adjust `content/cpred/` / `RulesOptions`.
+2. Suppressive fire, explosives with areas, grappling and martial-arts moves, healing/stabilization.
+3. A structured actor editor (stats, skills, weapon and armor pickers) in place of the JSON editor.
+4. Netrunning as a parallel combat track.
 
 ## Phase 2 — rules breadth
 

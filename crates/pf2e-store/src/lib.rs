@@ -3,15 +3,21 @@
 //! Persistence behind a repository trait. The bundled implementation uses
 //! SQLite; the schema (see `migrations/`) is written to be PostgreSQL
 //! compatible so a `PgStore` can implement the same trait later.
+//!
+//! Combats of every game system share one event-sourced log: the record says
+//! which system runs it, and the initial state and commands are that
+//! system's JSON. PF2e characters, monsters and encounters have dedicated
+//! tables; other systems keep their aggregates in the generic `documents`
+//! table.
 
-use pf2e_core::combat::{CombatLog, CombatState, Command};
 use pf2e_core::models::{Character, Encounter, Monster};
+use serde_json::Value;
 use rusqlite::{params, Connection, OptionalExtension};
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-const MIGRATIONS: &[(i64, &str)] = &[(1, include_str!("../migrations/001_init.sql"))];
+const MIGRATIONS: &[(i64, &str)] = &[(1, include_str!("../migrations/001_init.sql")), (2, include_str!("../migrations/002_multi_system.sql"))];
 
 #[derive(Debug, thiserror::Error)]
 pub enum StoreError {
@@ -68,11 +74,32 @@ pub enum DiceMode {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CombatRecord {
     pub id: String,
+    /// Game system id (`pf2e`, `cpred`, ...).
+    #[serde(default = "default_system")]
+    pub system: String,
     pub encounter_id: Option<String>,
     pub name: String,
     pub dice: DiceMode,
     pub status: String,
     pub created_at: i64,
+    pub updated_at: i64,
+}
+
+fn default_system() -> String {
+    "pf2e".into()
+}
+
+/// A combat as stored: the system's initial state and commands, as JSON.
+#[derive(Debug, Clone, PartialEq)]
+pub struct StoredLog {
+    pub initial: Value,
+    pub commands: Vec<Value>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DocumentSummary {
+    pub id: String,
+    pub name: String,
     pub updated_at: i64,
 }
 
@@ -93,16 +120,22 @@ pub trait Store: Send {
     fn put_encounter(&self, e: &Encounter) -> StoreResult<()>;
     fn delete_encounter(&self, id: &str) -> StoreResult<bool>;
 
-    fn create_combat(&self, rec: &CombatRecord, initial: &CombatState) -> StoreResult<()>;
+    fn create_combat(&self, rec: &CombatRecord, initial: &Value) -> StoreResult<()>;
     fn list_combats(&self) -> StoreResult<Vec<CombatRecord>>;
-    fn get_combat(&self, id: &str) -> StoreResult<Option<(CombatRecord, CombatLog)>>;
+    fn get_combat(&self, id: &str) -> StoreResult<Option<(CombatRecord, StoredLog)>>;
     /// Appends at exactly `seq`; fails with `Conflict` if that slot is taken
     /// (optimistic concurrency for two browser tabs on one combat).
-    fn append_command(&self, combat_id: &str, seq: usize, cmd: &Command) -> StoreResult<()>;
+    fn append_command(&self, combat_id: &str, seq: usize, cmd: &Value) -> StoreResult<()>;
     /// Removes commands with `seq >= from` (undo).
     fn truncate_commands(&self, combat_id: &str, from: usize) -> StoreResult<()>;
     fn set_combat_status(&self, id: &str, status: &str) -> StoreResult<()>;
     fn delete_combat(&self, id: &str) -> StoreResult<bool>;
+
+    // Generic per-system documents (actors, encounters, ...).
+    fn list_documents(&self, system: &str, kind: &str) -> StoreResult<Vec<DocumentSummary>>;
+    fn get_document(&self, system: &str, kind: &str, id: &str) -> StoreResult<Option<Value>>;
+    fn put_document(&self, system: &str, kind: &str, id: &str, name: &str, data: &Value) -> StoreResult<()>;
+    fn delete_document(&self, system: &str, kind: &str, id: &str) -> StoreResult<bool>;
 }
 
 pub fn now() -> i64 {
@@ -267,47 +300,49 @@ impl Store for SqliteStore {
         self.delete_row("encounters", id)
     }
 
-    fn create_combat(&self, rec: &CombatRecord, initial: &CombatState) -> StoreResult<()> {
+    fn create_combat(&self, rec: &CombatRecord, initial: &Value) -> StoreResult<()> {
         let (mode, seed) = match rec.dice {
             DiceMode::Manual => ("manual", None),
             DiceMode::Seeded { seed } => ("seeded", Some(seed as i64)),
         };
+        // PF2e encounters have a table (foreign key); other systems' are documents.
+        let (fk, doc_ref) = if rec.system == "pf2e" { (rec.encounter_id.clone(), None) } else { (None, rec.encounter_id.clone()) };
         self.conn.execute(
-            "INSERT INTO combats (id, encounter_id, name, dice_mode, dice_seed, initial_state, status, created_at, updated_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?8)",
-            params![rec.id, rec.encounter_id, rec.name, mode, seed, serde_json::to_string(initial)?, rec.status, rec.created_at],
+            "INSERT INTO combats (id, encounter_id, name, dice_mode, dice_seed, initial_state, status, created_at, updated_at, system, encounter_ref)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?8, ?9, ?10)",
+            params![rec.id, fk, rec.name, mode, seed, serde_json::to_string(initial)?, rec.status, rec.created_at, rec.system, doc_ref],
         )?;
         Ok(())
     }
 
     fn list_combats(&self) -> StoreResult<Vec<CombatRecord>> {
         let mut st = self.conn.prepare(
-            "SELECT id, encounter_id, name, dice_mode, dice_seed, status, created_at, updated_at FROM combats ORDER BY created_at DESC, id",
+            "SELECT id, COALESCE(encounter_id, encounter_ref), name, dice_mode, dice_seed, status, created_at, updated_at, system FROM combats ORDER BY created_at DESC, id",
         )?;
         let rows = st.query_map([], row_to_record)?;
         Ok(rows.collect::<Result<_, _>>()?)
     }
 
-    fn get_combat(&self, id: &str) -> StoreResult<Option<(CombatRecord, CombatLog)>> {
+    fn get_combat(&self, id: &str) -> StoreResult<Option<(CombatRecord, StoredLog)>> {
         let row = self
             .conn
             .query_row(
-                "SELECT id, encounter_id, name, dice_mode, dice_seed, status, created_at, updated_at, initial_state FROM combats WHERE id = ?1",
+                "SELECT id, COALESCE(encounter_id, encounter_ref), name, dice_mode, dice_seed, status, created_at, updated_at, system, initial_state FROM combats WHERE id = ?1",
                 [id],
-                |r| Ok((row_to_record(r)?, r.get::<_, String>(8)?)),
+                |r| Ok((row_to_record(r)?, r.get::<_, String>(9)?)),
             )
             .optional()?;
         let Some((rec, initial)) = row else { return Ok(None) };
-        let initial: CombatState = serde_json::from_str(&initial)?;
+        let initial: Value = serde_json::from_str(&initial)?;
         let mut st = self.conn.prepare("SELECT command FROM combat_commands WHERE combat_id = ?1 ORDER BY seq")?;
         let commands = st
             .query_map([id], |r| r.get::<_, String>(0))?
-            .map(|r| -> StoreResult<Command> { Ok(serde_json::from_str(&r?)?) })
+            .map(|r| -> StoreResult<Value> { Ok(serde_json::from_str(&r?)?) })
             .collect::<StoreResult<Vec<_>>>()?;
-        Ok(Some((rec, CombatLog { initial, commands })))
+        Ok(Some((rec, StoredLog { initial, commands })))
     }
 
-    fn append_command(&self, combat_id: &str, seq: usize, cmd: &Command) -> StoreResult<()> {
+    fn append_command(&self, combat_id: &str, seq: usize, cmd: &Value) -> StoreResult<()> {
         let res = self.conn.execute(
             "INSERT INTO combat_commands (combat_id, seq, command, created_at) VALUES (?1, ?2, ?3, ?4)",
             params![combat_id, seq as i64, serde_json::to_string(cmd)?, now()],
@@ -336,6 +371,37 @@ impl Store for SqliteStore {
     fn delete_combat(&self, id: &str) -> StoreResult<bool> {
         self.delete_row("combats", id)
     }
+
+    fn list_documents(&self, system: &str, kind: &str) -> StoreResult<Vec<DocumentSummary>> {
+        let mut st = self.conn.prepare("SELECT id, name, updated_at FROM documents WHERE system = ?1 AND kind = ?2 ORDER BY name, id")?;
+        let rows = st.query_map(params![system, kind], |r| Ok(DocumentSummary { id: r.get(0)?, name: r.get(1)?, updated_at: r.get(2)? }))?;
+        Ok(rows.collect::<Result<_, _>>()?)
+    }
+
+    fn get_document(&self, system: &str, kind: &str, id: &str) -> StoreResult<Option<Value>> {
+        let text: Option<String> = self
+            .conn
+            .query_row("SELECT data FROM documents WHERE system = ?1 AND kind = ?2 AND id = ?3", params![system, kind, id], |r| r.get(0))
+            .optional()?;
+        Ok(match text {
+            Some(t) => Some(serde_json::from_str(&t)?),
+            None => None,
+        })
+    }
+
+    fn put_document(&self, system: &str, kind: &str, id: &str, name: &str, data: &Value) -> StoreResult<()> {
+        let t = now();
+        self.conn.execute(
+            "INSERT INTO documents (system, kind, id, name, data, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?6)
+             ON CONFLICT (system, kind, id) DO UPDATE SET name = excluded.name, data = excluded.data, updated_at = excluded.updated_at",
+            params![system, kind, id, name, serde_json::to_string(data)?, t],
+        )?;
+        Ok(())
+    }
+
+    fn delete_document(&self, system: &str, kind: &str, id: &str) -> StoreResult<bool> {
+        Ok(self.conn.execute("DELETE FROM documents WHERE system = ?1 AND kind = ?2 AND id = ?3", params![system, kind, id])? > 0)
+    }
 }
 
 fn row_to_record(r: &rusqlite::Row<'_>) -> rusqlite::Result<CombatRecord> {
@@ -343,6 +409,7 @@ fn row_to_record(r: &rusqlite::Row<'_>) -> rusqlite::Result<CombatRecord> {
     let seed: Option<i64> = r.get(4)?;
     Ok(CombatRecord {
         id: r.get(0)?,
+        system: r.get(8)?,
         encounter_id: r.get(1)?,
         name: r.get(2)?,
         dice: match (mode.as_str(), seed) {
@@ -365,9 +432,9 @@ mod tests {
     #[test]
     fn migrations_are_idempotent() {
         let s = SqliteStore::in_memory().unwrap();
-        assert_eq!(s.schema_version().unwrap(), 1);
+        assert_eq!(s.schema_version().unwrap(), 2);
         s.migrate().unwrap();
-        assert_eq!(s.schema_version().unwrap(), 1);
+        assert_eq!(s.schema_version().unwrap(), 2);
     }
 
     #[test]
@@ -391,8 +458,11 @@ mod tests {
         let s = SqliteStore::in_memory().unwrap();
         let content = Content::bundled().unwrap();
         let state = CombatSetup::default().build(Battlefield::open(5, 5), vec![], &content).unwrap();
+        let state = serde_json::to_value(&state).unwrap();
+        let start = serde_json::to_value(Command::StartCombat).unwrap();
         let rec = CombatRecord {
             id: "c1".into(),
+            system: "pf2e".into(),
             encounter_id: None,
             name: "Test".into(),
             dice: DiceMode::Seeded { seed: 42 },
@@ -401,14 +471,30 @@ mod tests {
             updated_at: now(),
         };
         s.create_combat(&rec, &state).unwrap();
-        s.append_command("c1", 0, &Command::StartCombat).unwrap();
-        assert!(matches!(s.append_command("c1", 0, &Command::StartCombat), Err(StoreError::Conflict(_))));
+        s.append_command("c1", 0, &start).unwrap();
+        assert!(matches!(s.append_command("c1", 0, &start), Err(StoreError::Conflict(_))));
         let (r, log) = s.get_combat("c1").unwrap().unwrap();
         assert_eq!(r.dice, DiceMode::Seeded { seed: 42 });
-        assert_eq!(log.commands, vec![Command::StartCombat]);
+        assert_eq!(r.system, "pf2e");
+        assert_eq!(log.commands, vec![start]);
         assert_eq!(log.initial, state);
         s.truncate_commands("c1", 0).unwrap();
         assert!(s.get_combat("c1").unwrap().unwrap().1.commands.is_empty());
         assert!(s.delete_combat("c1").unwrap());
+    }
+
+    #[test]
+    fn documents_are_scoped_by_system_and_kind() {
+        let s = SqliteStore::in_memory().unwrap();
+        let doc = serde_json::json!({"id": "vex", "name": "Vex"});
+        s.put_document("cpred", "actor", "vex", "Vex", &doc).unwrap();
+        s.put_document("cpred", "encounter", "vex", "Not an actor", &doc).unwrap();
+        assert_eq!(s.get_document("cpred", "actor", "vex").unwrap(), Some(doc.clone()));
+        assert!(s.get_document("pf2e", "actor", "vex").unwrap().is_none());
+        assert_eq!(s.list_documents("cpred", "actor").unwrap().len(), 1);
+        s.put_document("cpred", "actor", "vex", "Vex II", &doc).unwrap();
+        assert_eq!(s.list_documents("cpred", "actor").unwrap()[0].name, "Vex II");
+        assert!(s.delete_document("cpred", "actor", "vex").unwrap());
+        assert!(s.list_documents("cpred", "actor").unwrap().is_empty());
     }
 }

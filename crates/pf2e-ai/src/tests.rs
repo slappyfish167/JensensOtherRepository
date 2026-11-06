@@ -181,8 +181,110 @@ fn spell_ranking_for_a_caster() {
     assert!(strat.creatures[0].recommendation.is_some());
 }
 
-// ---------------------------------------------------------------------------
-// Search acceleration, simulation splitting, explanations
+const FORBIDDEN: [&str; 4] = ["no action improves", "no move improves", "position is equal", "no recommendation"];
+
+fn assert_no_passive_wording(rec: &crate::queries::TurnRecommendation) {
+    for text in [&rec.summary, &rec.report.text, &rec.report.reason, &rec.report.position] {
+        let t = text.to_lowercase();
+        for f in FORBIDDEN {
+            assert!(!t.contains(f), "forbidden wording {f:?} in {text:?}");
+        }
+    }
+}
+
+#[test]
+fn monster_turn_reports_plan_alternate_damage_status_target_and_position() {
+    // A brute between a sturdy fighter and a fragile caster.
+    let mut s = state(vec![
+        p(sb("Kira", 14, 16, 8, "1d8+3"), Side::Party, 4, 5),
+        p(sb("Valeros", 40, 19, 9, "1d10+4"), Side::Party, 6, 5),
+        p(sb("Cave Brute", 50, 17, 11, "1d12+5"), Side::Enemy, 5, 5),
+    ]);
+    start(&mut s, &[1, 1, 20]);
+    assert_eq!(s.current_actor(), Some(CombatantId(3)));
+    let rec = recommend_turn(&s, SearchConfig::default()).unwrap();
+    assert_no_passive_wording(&rec);
+    let r = &rec.report;
+    // Concentrating on the fragile PC: two Strikes drop her about half the time.
+    assert_eq!(rec.plan.actions.iter().filter(|a| matches!(a, Action::Strike { target: CombatantId(1), .. })).count(), 2, "{}", r.text);
+    assert!(r.down_chance > 0.4, "{}", r.text);
+    assert_eq!(rec.plan.actions.len(), 3, "a committed monster spends all three actions: {:?}", rec.steps);
+    assert_eq!(r.priority_target, Some(CombatantId(1)), "the low-HP PC is the priority: {}", r.text);
+    assert!(r.expected_damage > 5.0, "{}", r.text);
+    assert!(r.down_chance > 0.0 && r.down_chance <= 1.0, "{}", r.text);
+    assert!(!r.alternate.is_empty(), "an alternate plan is always offered when one exists: {}", r.text);
+    assert_ne!(r.alternate, r.primary);
+    assert!(r.position.ends_with("Advantage"), "{}", r.position);
+    assert!(r.reason.contains("Kira has the lowest effective HP"), "{}", r.reason);
+    assert!(r.reason.contains("action economy"), "{}", r.reason);
+    for section in ["RECOMMENDED TURN", "Action 1:", "ALTERNATE TURN", "Expected Damage:", "Expected Status Effects:", "Priority Target:", "Chance to Down Target:", "Position Evaluation:", "Reason:"] {
+        assert!(r.text.contains(section), "missing {section}:\n{}", r.text);
+    }
+}
+
+#[test]
+fn monster_never_passes_while_legal_actions_remain() {
+    // Out of reach of everything and unable to move far: a passive engine
+    // would end the turn; a committed one still acts (Demoralize, then the
+    // best of whatever is left).
+    let mut stuck = sb("Statue Guard", 30, 16, 8, "1d8+3");
+    stuck.speed = 0;
+    let mut s = state(vec![
+        p(sb("Hero", 30, 18, 9, "1d8+4"), Side::Party, 2, 2),
+        p(stuck, Side::Enemy, 7, 2),
+    ]);
+    start(&mut s, &[1, 20]);
+    assert!(!s.legal_actions().is_empty());
+    let rec = recommend_turn(&s, SearchConfig::default()).unwrap();
+    assert_no_passive_wording(&rec);
+    assert!(!rec.plan.actions.is_empty(), "{}", rec.report.text);
+    assert!(rec.plan.actions.iter().any(|a| matches!(a, Action::Demoralize { .. })), "{}", rec.report.text);
+    assert!(
+        rec.report.expected_status_effects.iter().any(|e| e.effect.starts_with("frightened")),
+        "Demoralize's frightened is reported: {}",
+        rec.report.text
+    );
+}
+
+#[test]
+fn committed_search_completes_the_turn_even_when_out_of_budget() {
+    let mut s = state(vec![
+        p(sb("Hero", 40, 18, 10, "1d8+4"), Side::Party, 5, 5),
+        p(sb("Orc", 40, 16, 8, "1d8+3"), Side::Enemy, 6, 5),
+    ]);
+    start(&mut s, &[1, 20]);
+    let plan = best_turn(&s, &HeuristicEvaluator::default(), SearchConfig { node_budget: 10, ..Default::default() }).unwrap();
+    assert!(plan.truncated);
+    assert_eq!(plan.actions.len(), 3, "{:?}", plan.actions);
+}
+
+#[test]
+fn a_creature_with_no_actions_left_gets_an_empty_but_explained_plan() {
+    let mut s = state(vec![
+        p(sb("Hero", 40, 18, 10, "1d8+4"), Side::Party, 5, 5),
+        p(sb("Orc", 40, 16, 8, "1d8+3"), Side::Enemy, 9, 9),
+    ]);
+    start(&mut s, &[1, 20]);
+    let orc = s.combatants.iter_mut().find(|c| c.id == CombatantId(2)).unwrap();
+    orc.actions_remaining = 0;
+    let rec = recommend_turn(&s, SearchConfig::default()).unwrap();
+    assert!(rec.plan.actions.is_empty());
+    assert_no_passive_wording(&rec);
+    assert!(rec.report.reason.contains("no actions remaining"), "{}", rec.report.reason);
+}
+
+#[test]
+fn simulated_monsters_spend_their_actions() {
+    let mut stuck = sb("Statue Guard", 30, 16, 8, "1d8+3");
+    stuck.speed = 0;
+    let mut s = state(vec![
+        p(sb("Hero", 30, 18, 9, "1d8+4"), Side::Party, 2, 2),
+        p(stuck, Side::Enemy, 7, 2),
+    ]);
+    start(&mut s, &[1, 20]);
+    assert!(crate::simulate::scripted_action(&s).is_some());
+}
+
 // ---------------------------------------------------------------------------
 
 fn skirmish() -> CombatState {

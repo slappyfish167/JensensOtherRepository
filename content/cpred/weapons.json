@@ -1,0 +1,15 @@
+[
+  {"id": "medium_pistol",     "name": "Medium Pistol",     "class": "pistol",        "skill": "handgun",       "damage": "2d6", "rof": 2, "magazine": 12},
+  {"id": "heavy_pistol",      "name": "Heavy Pistol",      "class": "pistol",        "skill": "handgun",       "damage": "3d6", "rof": 2, "magazine": 8},
+  {"id": "very_heavy_pistol", "name": "Very Heavy Pistol", "class": "pistol",        "skill": "handgun",       "damage": "4d6", "rof": 1, "magazine": 8},
+  {"id": "smg",               "name": "SMG",               "class": "smg",           "skill": "handgun",       "damage": "2d6", "rof": 1, "magazine": 30, "autofire": 3},
+  {"id": "heavy_smg",         "name": "Heavy SMG",         "class": "smg",           "skill": "handgun",       "damage": "3d6", "rof": 1, "magazine": 40, "autofire": 3},
+  {"id": "shotgun",           "name": "Shotgun",           "class": "shotgun",       "skill": "shoulder_arms", "damage": "5d6", "rof": 1, "magazine": 4},
+  {"id": "assault_rifle",     "name": "Assault Rifle",     "class": "assault_rifle", "skill": "shoulder_arms", "damage": "5d6", "rof": 1, "magazine": 25, "autofire": 4},
+  {"id": "sniper_rifle",      "name": "Sniper Rifle",      "class": "sniper_rifle",  "skill": "shoulder_arms", "damage": "5d6", "rof": 1, "magazine": 4},
+  {"id": "bow",               "name": "Bow",               "class": "bow",           "skill": "archery",       "damage": "4d6", "rof": 1, "magazine": 0},
+  {"id": "light_melee",       "name": "Light Melee Weapon",     "class": "melee", "skill": "melee_weapon", "damage": "1d6", "rof": 2, "melee": true},
+  {"id": "medium_melee",      "name": "Medium Melee Weapon",    "class": "melee", "skill": "melee_weapon", "damage": "2d6", "rof": 2, "melee": true},
+  {"id": "heavy_melee",       "name": "Heavy Melee Weapon",     "class": "melee", "skill": "melee_weapon", "damage": "3d6", "rof": 2, "melee": true},
+  {"id": "very_heavy_melee",  "name": "Very Heavy Melee Weapon","class": "melee", "skill": "melee_weapon", "damage": "4d6", "rof": 1, "melee": true}
+]

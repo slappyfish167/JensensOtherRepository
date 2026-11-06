@@ -113,6 +113,8 @@ async fn full_combat_flow_with_replay_and_undo() {
     let (s, bt) = call(&r, "POST", &format!("/api/combats/{id}/analysis/best-turn"), Some(json!({"node_budget": 3000}))).await;
     assert_eq!(s, StatusCode::OK, "{bt}");
     assert!(bt["summary"].is_string());
+    assert!(bt["report"]["text"].as_str().unwrap().contains("RECOMMENDED TURN"), "{bt}");
+    assert!(!bt["report"]["primary"].as_array().unwrap().is_empty(), "the acting creature has legal actions: {bt}");
 
     let (_, rp) = call(&r, "GET", &format!("/api/combats/{id}/replay"), None).await;
     assert_eq!(rp["identical"], true);
@@ -138,4 +140,112 @@ async fn manual_combat_refuses_auto_roll() {
     call(&r, "POST", &format!("/api/combats/{id}/commands"), Some(json!({"type": "start_combat"}))).await;
     let (s, _) = call(&r, "POST", &format!("/api/combats/{id}/auto-roll"), None).await;
     assert_eq!(s, StatusCode::CONFLICT);
+}
+
+#[tokio::test]
+async fn systems_are_listed() {
+    let r = app();
+    let (s, v) = call(&r, "GET", "/api/systems", None).await;
+    assert_eq!(s, StatusCode::OK);
+    let ids: Vec<_> = v.as_array().unwrap().iter().map(|x| x["id"].as_str().unwrap().to_string()).collect();
+    assert_eq!(ids, vec!["pf2e", "cpred"]);
+    let (s, c) = call(&r, "GET", "/api/systems/cpred/content", None).await;
+    assert_eq!(s, StatusCode::OK);
+    assert!(!c["weapons"].as_array().unwrap().is_empty());
+}
+
+#[tokio::test]
+async fn cyberpunk_red_documents_are_validated() {
+    let r = app();
+    let (_, actors) = call(&r, "GET", "/api/systems/cpred/actors", None).await;
+    assert!(actors.as_array().unwrap().len() >= 8, "{actors}");
+    let (s, vex) = call(&r, "GET", "/api/systems/cpred/actors/vex", None).await;
+    assert_eq!(s, StatusCode::OK);
+    let mut copy = vex.clone();
+    copy["id"] = json!("vex-2");
+    copy["name"] = json!("Vex II");
+    let (s, saved) = call(&r, "POST", "/api/systems/cpred/actors", Some(copy.clone())).await;
+    assert_eq!(s, StatusCode::OK, "{saved}");
+    let (s, _) = call(&r, "POST", "/api/systems/cpred/actors", Some(copy)).await;
+    assert_eq!(s, StatusCode::CONFLICT);
+    let (s, bad) = call(&r, "POST", "/api/systems/cpred/actors", Some(json!({"name": "Nobody"}))).await;
+    assert_eq!(s, StatusCode::BAD_REQUEST, "{bad}");
+    // An encounter naming an unknown actor cannot be saved.
+    let (_, enc) = call(&r, "GET", "/api/systems/cpred/encounters/warehouse-standoff", None).await;
+    let mut broken = enc.clone();
+    broken["id"] = json!("broken");
+    broken["participants"][0]["actor_id"] = json!("ghost");
+    let (s, _) = call(&r, "POST", "/api/systems/cpred/encounters", Some(broken)).await;
+    assert_eq!(s, StatusCode::BAD_REQUEST);
+    let (s, _) = call(&r, "GET", "/api/systems/pf2e/actors", None).await;
+    assert_eq!(s, StatusCode::OK, "listing is harmless for any system");
+    let (_, d) = call(&r, "DELETE", "/api/systems/cpred/actors/vex-2", None).await;
+    assert_eq!(d["deleted"], true);
+}
+
+#[tokio::test]
+async fn cyberpunk_red_combat_end_to_end() {
+    let r = app();
+    let (s, view) = call(
+        &r,
+        "POST",
+        "/api/combats",
+        Some(json!({"system": "cpred", "encounter_id": "warehouse-standoff", "dice": {"mode": "seeded", "seed": 11}})),
+    )
+    .await;
+    assert_eq!(s, StatusCode::OK, "{view}");
+    assert_eq!(view["system"], "cpred");
+    assert_eq!(view["table"]["map"]["square"], "2 m");
+    let id = view["id"].as_str().unwrap().to_string();
+
+    let (s, v) = call(&r, "POST", &format!("/api/combats/{id}/commands"), Some(json!({"type": "start_combat"}))).await;
+    assert_eq!(s, StatusCode::OK, "{v}");
+    assert_eq!(v["prompt"]["input"]["kind"], "die");
+    assert_eq!(v["prompt"]["input"]["sides"], 10);
+    // A PF2e command is rejected, not misread.
+    let (s, _) = call(&r, "POST", &format!("/api/combats/{id}/commands"), Some(json!({"type": "provide_roll", "request_id": 999, "value": 25}))).await;
+    assert_eq!(s, StatusCode::UNPROCESSABLE_ENTITY);
+    let mut view = v;
+    for _ in 0..9 {
+        let (s, v) = call(&r, "POST", &format!("/api/combats/{id}/auto-roll"), None).await;
+        assert_eq!(s, StatusCode::OK, "{v}");
+        view = v;
+    }
+    assert_eq!(view["table"]["phase"]["kind"], "active", "{}", view["table"]);
+    assert!(view["log"].as_array().unwrap().iter().any(|l| l.as_str().unwrap().starts_with("Initiative:")), "{}", view["log"]);
+
+    let (_, actions) = call(&r, "GET", &format!("/api/combats/{id}/actions"), None).await;
+    let actions = actions.as_array().unwrap();
+    assert!(actions.iter().any(|a| a["group"] == "Movement" && a["move_to"].is_object()));
+
+    let (_, ev) = call(&r, "GET", &format!("/api/combats/{id}/analysis/evaluation"), None).await;
+    assert!(ev["score"].as_f64().unwrap().abs() <= 10.0);
+    assert!(ev["factors"].as_array().unwrap().iter().any(|f| f["name"] == "Cover"));
+    let (s, bt) = call(&r, "POST", &format!("/api/combats/{id}/analysis/best-turn"), Some(json!({"node_budget": 4000}))).await;
+    assert_eq!(s, StatusCode::OK, "{bt}");
+    assert!(bt["report"]["text"].as_str().unwrap().contains("RECOMMENDED TURN"));
+    assert!(!bt["report"]["primary"].as_array().unwrap().is_empty(), "{bt}");
+
+    // Play the recommended first action for real.
+    let actor = view["current_actor"].clone();
+    let first = bt["plan"]["actions"][0].clone();
+    let (s, v) = call(&r, "POST", &format!("/api/combats/{id}/commands"), Some(json!({"type": "act", "actor": actor, "action": first}))).await;
+    assert_eq!(s, StatusCode::OK, "{v}");
+
+    let (_, st) = call(&r, "GET", &format!("/api/combats/{id}/analysis/strategy?side=enemy&node_budget=2000"), None).await;
+    assert_eq!(st["creatures"].as_array().unwrap().len(), 5, "{st}");
+    let (_, sp) = call(&r, "GET", &format!("/api/combats/{id}/analysis/spells"), None).await;
+    assert_eq!(sp, json!([]));
+    let (s, tpk) = call(&r, "POST", &format!("/api/combats/{id}/analysis/tpk"), Some(json!({"runs": 5, "seed": 2}))).await;
+    assert_eq!(s, StatusCode::OK, "{tpk}");
+
+    let (_, rp) = call(&r, "GET", &format!("/api/combats/{id}/replay"), None).await;
+    assert_eq!(rp["identical"], true, "{rp}");
+    let (_, before) = call(&r, "GET", &format!("/api/combats/{id}"), None).await;
+    let (s, after) = call(&r, "POST", &format!("/api/combats/{id}/undo"), None).await;
+    assert_eq!(s, StatusCode::OK);
+    assert_eq!(after["command_count"], before["command_count"].as_u64().unwrap() - 1);
+
+    let (_, list) = call(&r, "GET", "/api/combats", None).await;
+    assert!(list.as_array().unwrap().iter().any(|c| c["id"] == id.as_str() && c["system"] == "cpred"));
 }
