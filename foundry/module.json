@@ -2,7 +2,7 @@
   "id": "pf2e-stockfish",
   "title": "PF2e Stockfish — Tactical Analysis",
   "description": "A chess-engine style evaluation bar, best-turn search, GM monster assistant, threat forecast and position explanations for Pathfinder Second Edition combats. Powered by a deterministic Rust rules engine compiled to WebAssembly; analysis runs locally in a background worker.",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "authors": [{ "name": "PF2e Stockfish contributors" }],
   "compatibility": { "minimum": "13", "verified": "13" },
   "relationships": {
