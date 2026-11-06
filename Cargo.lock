@@ -95,6 +95,25 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4e7648175b45a9a48536d676f68d918270699102aa8dab5496df06904c914600"
 
 [[package]]
+name = "cpred-ai"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "tactics-core",
+]
+
+[[package]]
+name = "cpred-core"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "tactics-core",
+ "thiserror",
+]
+
+[[package]]
 name = "errno"
 version = "0.3.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -411,6 +430,8 @@ dependencies = [
  "pf2e-core",
  "serde",
  "serde_json",
+ "tactics-ai",
+ "tactics-core",
 ]
 
 [[package]]
@@ -419,6 +440,7 @@ version = "0.1.0"
 dependencies = [
  "serde",
  "serde_json",
+ "tactics-core",
  "thiserror",
 ]
 
@@ -427,12 +449,16 @@ name = "pf2e-server"
 version = "0.1.0"
 dependencies = [
  "axum",
+ "cpred-ai",
+ "cpred-core",
  "http-body-util",
  "pf2e-ai",
  "pf2e-core",
  "pf2e-store",
  "serde",
  "serde_json",
+ "tactics-ai",
+ "tactics-core",
  "thiserror",
  "tokio",
  "tower",
@@ -668,6 +694,24 @@ name = "sync_wrapper"
 version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0bf256ce5efdfa370213c1dabab5935a12e49f2c58d15e9eac2870d3b4f27263"
+
+[[package]]
+name = "tactics-ai"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "tactics-core",
+]
+
+[[package]]
+name = "tactics-core"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "thiserror",
+]
 
 [[package]]
 name = "thiserror"

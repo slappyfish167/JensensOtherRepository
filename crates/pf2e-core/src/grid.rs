@@ -11,17 +11,7 @@ use serde::{Deserialize, Serialize};
 use std::cmp::Reverse;
 use std::collections::{BTreeMap, BinaryHeap, HashSet};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Default, Serialize, Deserialize)]
-pub struct Pos {
-    pub x: i32,
-    pub y: i32,
-}
-
-impl Pos {
-    pub const fn new(x: i32, y: i32) -> Self {
-        Pos { x, y }
-    }
-}
+pub use tactics_core::Pos;
 
 /// PF2e distance in feet for a displacement of (dx, dy) squares:
 /// every second diagonal costs 10 feet.

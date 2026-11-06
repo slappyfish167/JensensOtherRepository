@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../api/client';
-import type { Action, CombatRecord, CombatView, CombatantId, Command, ConditionKind, Evaluation, LegalAction, Pos } from '../api/types';
+import type { Action, AnyCombatView, CombatRecord, CombatView, CombatantId, Command, ConditionKind, Evaluation, LegalAction, Pos } from '../api/types';
 import { CONDITIONS } from '../api/types';
 import { AnalysisPanel } from '../components/AnalysisPanel';
 import { BattleGrid, tokensFromCombatants } from '../components/BattleGrid';
@@ -9,6 +9,7 @@ import { InitiativeTracker } from '../components/InitiativeTracker';
 import { PendingPanel } from '../components/PendingPanel';
 import { StatblockView } from '../components/StatblockView';
 import { describeEvent, nameOf } from '../lib/format';
+import { TableCombatPage } from './TableCombatPage';
 
 type Mode = null | { kind: 'stride' | 'step' } | { kind: 'aim'; entry: number; spell_id: string; rank: number };
 
@@ -37,7 +38,7 @@ export function CombatPage({ combatId, onOpen }: { combatId: string | null; onOp
 
   // Refresh derived data whenever the state changes.
   useEffect(() => {
-    if (!view) return;
+    if (!view || view.system !== 'pf2e') return;
     setMode(null);
     setMoveSquares(new Map());
     if (view.state.phase.kind === 'active' && !view.pending) {
@@ -121,17 +122,21 @@ export function CombatPage({ combatId, onOpen }: { combatId: string | null; onOp
       <div className="page">
         <h2>Combats</h2>
         {error && <div className="error">{error}</div>}
-        <p className="muted">Start a combat from the Encounters page, or resume one:</p>
+        <p className="muted">Start a combat from an Encounters page, or resume one (any game system):</p>
         <ul className="list">
           {combats.map((c) => (
             <li key={c.id} onClick={() => onOpen(c.id)}>
-              <strong>{c.name}</strong> <span className="muted">{c.status} · {c.dice.mode} dice · {new Date(c.created_at * 1000).toLocaleString()}</span>
+              <strong>{c.name}</strong> <span className="badge">{c.system === 'cpred' ? 'Cyberpunk RED' : 'Pathfinder 2e'}</span>{' '}
+              <span className="muted">{c.status} · {c.dice.mode} dice · {new Date(c.created_at * 1000).toLocaleString()}</span>
             </li>
           ))}
         </ul>
       </div>
     );
   }
+
+  // Systems without a dedicated screen run on the system-neutral one.
+  if (view.system !== 'pf2e') return <TableCombatPage key={view.id} initial={view as unknown as AnyCombatView} />;
 
   const s = view.state;
   const phase = s.phase;
@@ -228,7 +233,15 @@ export function CombatPage({ combatId, onOpen }: { combatId: string | null; onOp
           </div>
         )}
 
-        <AnalysisPanel view={view} evaluation={evaluation} onPlay={act} />
+        <AnalysisPanel
+          combatId={view.id}
+          ready={phase.kind === 'active' && !view.pending}
+          active={phase.kind === 'active'}
+          currentActor={view.current_actor}
+          actorName={nameOf(s, view.current_actor)}
+          evaluation={evaluation}
+          onPlay={act}
+        />
 
         {inspected && (
           <div className="panel">

@@ -1,8 +1,10 @@
-# PF2e Combat Engine
+# Tabletop Combat Engine
 
-A standalone tactical combat engine for **Pathfinder Second Edition** — it runs encounters the way
-Stockfish runs chess positions. The rules core is pure and deterministic, *you* roll the dice, and an
-optional analysis layer evaluates the position (−10 … +10) and searches for the best moves.
+A standalone tactical combat engine for tabletop RPGs — it runs encounters the way Stockfish runs
+chess positions. It supports **multiple game systems**: **Pathfinder Second Edition** and
+**Cyberpunk RED** today, with a documented contract for adding more ([docs/SYSTEMS.md](docs/SYSTEMS.md)).
+Each rules core is pure and deterministic, *you* roll the dice, and a system-neutral analysis layer
+evaluates the position (−10 … +10) and plays the hostile side to win.
 
 An illustrative exchange:
 
@@ -14,6 +16,17 @@ An illustrative exchange:
 ```
 
 ## Features
+
+* **Multiple game systems** — every system plugs into the same store, API, analysis layer and
+  combat screen through two traits (`GameSystem`, `TacticalSystem`); pick the system in the header.
+* **Cyberpunk RED** — REF + 1d10 initiative, Move Action + Action, ROF, aimed (head) shots,
+  autofire, melee vs Evasion, ranged DV by range band, dodging, armor SP with ablation and
+  half-SP melee, headshot doubling, critical injuries on two sixes, seriously/mortally wounded,
+  death saves, ammunition and reloading, destructible cover. Rules tables are data
+  (`content/cpred/`). See [docs/CYBERPUNK_RED.md](docs/CYBERPUNK_RED.md) for the rules as
+  implemented and the points to check against your rulebook.
+
+Pathfinder 2e:
 
 * **Character builder** — ancestries, backgrounds, classes, archetype dedications, feats with
   prerequisites, skills, equipment with runes, spells; exhaustive PF2e legality checks; derived stat
@@ -44,9 +57,12 @@ cd frontend && npm install && npm run build && cd ..
 cargo run --release -p pf2e-server
 ```
 
-Open <http://127.0.0.1:8080>. An empty database is seeded with four sample level-1 PCs, eight sample
-monsters/hazards and the *Crypt Ambush* encounter: **Encounters → Crypt Ambush → Save & start combat →
-Start combat**.
+Open <http://127.0.0.1:8080>. An empty database is seeded with sample content for each system:
+
+* **Pathfinder 2e**: four level-1 PCs, eight monsters/hazards and the *Crypt Ambush* encounter —
+  **Encounters → Crypt Ambush → Save & start combat → Start combat**.
+* **Cyberpunk RED** (pick it in the header): a crew of edgerunners, several NPCs and the
+  *Warehouse Standoff* encounter — **Encounters → Warehouse Standoff → Save & start combat**.
 
 For frontend development with hot reload run the server, then:
 
@@ -82,6 +98,8 @@ wounded foes and closes distance, Monte Carlo reproducibility), storage, and the
 | Document | Contents |
 |---|---|
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | System diagram, layering rules, command/event loop, determinism, design trade-offs |
+| [docs/SYSTEMS.md](docs/SYSTEMS.md) | Multiple game systems: the `GameSystem` / `TacticalSystem` contracts, adding a system |
+| [docs/CYBERPUNK_RED.md](docs/CYBERPUNK_RED.md) | Cyberpunk RED rules as implemented, assumptions to verify, content format |
 | [docs/DATABASE.md](docs/DATABASE.md) | Schema, event-sourced combats, PostgreSQL notes |
 | [docs/API.md](docs/API.md) | REST endpoints, commands, pending-input format, examples |
 | [docs/ENGINE.md](docs/ENGINE.md) | Data models, resolution queue, rules algorithms, builder, example code, coverage |
@@ -91,11 +109,15 @@ wounded foes and closes distance, Monte Carlo reproducibility), storage, and the
 ## Repository layout
 
 ```
-crates/pf2e-core     rules engine — models, builder, combat state machine (no I/O, no RNG)
-crates/pf2e-ai       optional analysis — evaluation, search, simulation (no rules)
+crates/tactics-core  system-neutral primitives, GameSystem trait, neutral views
+crates/tactics-ai    system-neutral analysis — evaluation, committed search, report, Monte Carlo (no rules)
+crates/pf2e-core     PF2e rules engine — models, builder, combat state machine (no I/O, no RNG)
+crates/pf2e-ai       PF2e adapter (GameSystem + TacticalSystem), EV helpers, best-spell query
+crates/cpred-core    Cyberpunk RED rules engine — models, combat state machine (no I/O, no RNG)
+crates/cpred-ai      Cyberpunk RED adapter (GameSystem + TacticalSystem), EV helpers
 crates/pf2e-store    persistence — Store trait + SQLite (Postgres-compatible schema)
-crates/pf2e-server   REST API (axum), seeding, end-to-end tests
-content/             rules data (JSON), sample characters and encounter
+crates/pf2e-server   REST API (axum), per-system sessions, seeding, end-to-end tests
+content/             rules data (JSON) and samples; content/cpred/ for Cyberpunk RED
 frontend/            React + TypeScript UI (Vite)
 docs/                design documentation
 ```

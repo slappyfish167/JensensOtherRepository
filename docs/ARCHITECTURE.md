@@ -1,9 +1,14 @@
 # Architecture
 
-The PF2e Combat Engine runs Pathfinder Second Edition encounters the way a chess
-engine runs positions: a **deterministic rules core** holds the position, humans
-(or an opt-in seeded roller) supply dice, and an **optional analysis layer**
-evaluates the position and searches for strong moves.
+The Tabletop Combat Engine runs tabletop RPG encounters the way a chess engine runs positions: a
+**deterministic rules core** per game system holds the position, humans (or an opt-in seeded
+roller) supply dice, and an **optional, system-neutral analysis layer** evaluates the position and
+searches for strong moves.
+
+Two game systems ship today — Pathfinder 2e and Cyberpunk RED. They plug into the same store,
+server, analysis and UI through the `GameSystem` and `TacticalSystem` traits; see
+[SYSTEMS.md](SYSTEMS.md) for the contracts and for adding a system. The diagram below shows the
+PF2e path; Cyberpunk RED follows the same shape (`cpred-core` rules, `cpred-ai` adapter).
 
 ## 1. System diagram
 
@@ -57,16 +62,22 @@ flowchart LR
 ASCII version of the dependency rule:
 
 ```
-  frontend ──HTTP──▶ pf2e-server ──▶ pf2e-ai ──▶ pf2e-core ◀── pf2e-store
-                          │                         ▲
-                          └─────────────────────────┘
+  frontend ──HTTP──▶ pf2e-server ──▶ pf2e-ai  ──▶ pf2e-core  ──┐
+                          │      └─▶ cpred-ai ──▶ cpred-core ──┼──▶ tactics-core
+                          │          (both implement            │
+                          │           tactics-ai's trait) ──────┘
+                          └──▶ pf2e-store (system-tagged JSON combat logs + documents)
 ```
 
-* `pf2e-core` depends on nothing but `serde`/`thiserror`. It cannot do I/O, read a clock, or roll dice.
-* `pf2e-ai` depends only on `pf2e-core`. It contains **no rules**: it asks the engine for legal
-  actions and simulates by applying commands to cloned states. Deleting the crate leaves a fully
-  working rules engine and API (minus `/analysis/*`).
-* `pf2e-store` depends on `pf2e-core` for the types it persists.
+* `tactics-core` holds the shared primitives (ids, sides, positions, dice, seeded RNG), the
+  `GameSystem` trait and the neutral view models. It depends only on `serde`/`thiserror`.
+* Each rules core (`pf2e-core`, `cpred-core`) depends only on `tactics-core`. It cannot do I/O,
+  read a clock, or roll dice.
+* `tactics-ai` depends only on `tactics-core`. It contains **no rules**: it asks the engine for
+  legal actions through `TacticalSystem` and simulates by applying commands to cloned states.
+* The adapters (`pf2e-ai`, `cpred-ai`) implement `GameSystem` and `TacticalSystem` for their core.
+  Deleting them leaves fully working rules engines.
+* `pf2e-store` stores PF2e aggregates in dedicated tables, everything else as system-tagged JSON.
 * `pf2e-server` wires everything together and is the only crate with async, HTTP or environment access.
 
 ## 2. The central loop: commands in, events out
@@ -131,11 +142,15 @@ when the user presses **Auto** for a specific roll.
 
 ```
 Cargo.toml                 workspace
-crates/pf2e-core/          rules engine (models, builder, combat)
-crates/pf2e-ai/            evaluation, search, simulation, queries
+crates/tactics-core/       shared primitives, GameSystem trait, neutral views
+crates/tactics-ai/         system-neutral evaluation, search, report, simulation
+crates/pf2e-core/          PF2e rules engine (models, builder, combat)
+crates/pf2e-ai/            PF2e adapter, EV helpers, best-spell query
+crates/cpred-core/         Cyberpunk RED rules engine (models, combat)
+crates/cpred-ai/           Cyberpunk RED adapter, EV helpers
 crates/pf2e-store/         Store trait, SQLite impl, migrations/
 crates/pf2e-server/        axum API, seeding, integration tests
-content/                   ancestries, classes, feats, items, spells, monsters, sample PCs & encounter
+content/                   PF2e rules data and samples; content/cpred/ for Cyberpunk RED
 frontend/                  React + TypeScript (Vite)
 docs/                      this documentation
 ```

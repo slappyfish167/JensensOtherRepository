@@ -1,0 +1,86 @@
+[
+  {
+    "id": "vex", "name": "Vex", "kind": "pc",
+    "statblock": {
+      "stats": {"int": 5, "ref": 8, "dex": 7, "tech": 4, "cool": 6, "will": 6, "luck": 4, "move": 6, "body": 7, "emp": 3},
+      "skills": {"shoulder_arms": 6, "autofire": 5, "handgun": 4, "brawling": 4, "melee_weapon": 3, "evasion": 5, "athletics": 4, "perception": 4},
+      "weapon_ids": ["assault_rifle", "heavy_pistol"],
+      "armor_ids": {"body": "light_armorjack", "head": "light_armorjack"},
+      "notes": "Solo. Ex-corporate security contractor turned freelance gun."
+    }
+  },
+  {
+    "id": "juno-okafor", "name": "Juno Okafor", "kind": "pc",
+    "statblock": {
+      "stats": {"int": 7, "ref": 6, "dex": 6, "tech": 4, "cool": 7, "will": 5, "luck": 6, "move": 5, "body": 5, "emp": 7},
+      "skills": {"handgun": 5, "evasion": 4, "brawling": 3, "athletics": 3, "perception": 5},
+      "weapon_ids": ["heavy_pistol"],
+      "armor_ids": {"body": "kevlar", "head": "kevlar"},
+      "notes": "Fixer. Knows everyone worth knowing in the district and owes half of them."
+    }
+  },
+  {
+    "id": "moth", "name": "Moth", "kind": "pc",
+    "statblock": {
+      "stats": {"int": 8, "ref": 5, "dex": 6, "tech": 7, "cool": 4, "will": 5, "luck": 5, "move": 6, "body": 4, "emp": 5},
+      "skills": {"handgun": 4, "evasion": 5, "brawling": 2, "athletics": 2, "perception": 6},
+      "weapon_ids": ["medium_pistol"],
+      "armor_ids": {"body": "leathers"},
+      "notes": "Netrunner. Prefers to fight from a safe corner with a deck on her knees."
+    }
+  },
+  {
+    "id": "rook-haldane", "name": "Rook Haldane", "kind": "pc",
+    "statblock": {
+      "stats": {"int": 4, "ref": 6, "dex": 7, "tech": 5, "cool": 5, "will": 7, "luck": 4, "move": 6, "body": 8, "emp": 4},
+      "skills": {"shoulder_arms": 5, "melee_weapon": 6, "brawling": 5, "evasion": 4, "athletics": 5, "perception": 3},
+      "weapon_ids": ["shotgun", "heavy_melee"],
+      "armor_ids": {"body": "medium_armorjack", "head": "kevlar"},
+      "notes": "Nomad. Drives the van, kicks in the doors."
+    }
+  },
+  {
+    "id": "street-ganger", "name": "Street Ganger", "kind": "npc",
+    "statblock": {
+      "stats": {"int": 3, "ref": 5, "dex": 5, "tech": 3, "cool": 4, "will": 4, "luck": 2, "move": 5, "body": 4, "emp": 3},
+      "skills": {"handgun": 4, "autofire": 3, "brawling": 3, "melee_weapon": 3, "evasion": 3, "athletics": 3, "perception": 2},
+      "weapon_ids": ["smg", "light_melee"],
+      "armor_ids": {"body": "leathers"},
+      "max_hp": 25,
+      "notes": "Corner muscle with a cheap SMG and more nerve than training."
+    }
+  },
+  {
+    "id": "corp-security", "name": "Corp Security", "kind": "npc",
+    "statblock": {
+      "stats": {"int": 4, "ref": 6, "dex": 5, "tech": 4, "cool": 5, "will": 5, "luck": 3, "move": 5, "body": 6, "emp": 3},
+      "skills": {"shoulder_arms": 5, "autofire": 4, "handgun": 4, "brawling": 4, "evasion": 4, "athletics": 4, "perception": 4},
+      "weapon_ids": ["assault_rifle"],
+      "armor_ids": {"body": "light_armorjack", "head": "light_armorjack"},
+      "max_hp": 35,
+      "notes": "Disciplined guard on a corporate contract."
+    }
+  },
+  {
+    "id": "gang-heavy", "name": "Gang Heavy", "kind": "npc",
+    "statblock": {
+      "stats": {"int": 3, "ref": 4, "dex": 6, "tech": 3, "cool": 6, "will": 6, "luck": 2, "move": 6, "body": 9, "emp": 2},
+      "skills": {"melee_weapon": 6, "brawling": 5, "evasion": 3, "athletics": 5, "perception": 2},
+      "weapon_ids": ["very_heavy_melee"],
+      "armor_ids": {"body": "medium_armorjack"},
+      "max_hp": 45,
+      "notes": "Enormous, slow, and carrying something heavy enough to dent a car."
+    }
+  },
+  {
+    "id": "gang-boss", "name": "Gang Boss", "kind": "npc",
+    "statblock": {
+      "stats": {"int": 6, "ref": 8, "dex": 6, "tech": 4, "cool": 7, "will": 7, "luck": 5, "move": 6, "body": 6, "emp": 4},
+      "skills": {"handgun": 6, "evasion": 5, "brawling": 4, "athletics": 4, "perception": 5},
+      "weapon_ids": ["very_heavy_pistol"],
+      "armor_ids": {"body": "light_armorjack", "head": "light_armorjack"},
+      "max_hp": 40,
+      "notes": "Runs the block. Quick on the draw and quicker to duck."
+    }
+  }
+]

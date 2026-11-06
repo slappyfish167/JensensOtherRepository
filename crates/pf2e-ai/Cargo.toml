@@ -6,6 +6,8 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
+tactics-core.workspace = true
+tactics-ai.workspace = true
 pf2e-core.workspace = true
 serde.workspace = true
 serde_json.workspace = true

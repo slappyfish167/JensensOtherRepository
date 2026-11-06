@@ -1,0 +1,12 @@
+[package]
+name = "cpred-core"
+description = "Deterministic Cyberpunk RED combat rules engine: models, content, combat state machine, replay, rules analysis."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+tactics-core.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true

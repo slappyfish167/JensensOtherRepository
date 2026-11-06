@@ -216,16 +216,4 @@ impl Size {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum Side {
-    Party,
-    Enemy,
-    Neutral,
-}
-
-impl Side {
-    pub fn is_hostile_to(self, other: Side) -> bool {
-        matches!((self, other), (Side::Party, Side::Enemy) | (Side::Enemy, Side::Party))
-    }
-}
+pub use tactics_core::Side;

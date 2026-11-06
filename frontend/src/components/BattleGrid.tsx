@@ -9,6 +9,8 @@ export interface GridToken {
   side: string;
   position: Pos;
   size?: string;
+  /** Edge length in squares (overrides `size`). */
+  squares?: number;
   hp?: number;
   maxHp?: number;
   down?: boolean;
@@ -38,11 +40,14 @@ interface Props {
   selectedId?: CombatantId | string | null;
   highlights?: Map<string, string>; // "x,y" → css class
   cell?: number;
+  /** Glyph → CSS class, for systems with their own map legend. */
+  terrain?: Record<string, string>;
   onCellClick?: (p: Pos) => void;
   onTokenClick?: (id: CombatantId | string) => void;
 }
 
-export function BattleGrid({ battlefield, tokens, activeId, selectedId, highlights, cell = 34, onCellClick, onTokenClick }: Props) {
+export function BattleGrid({ battlefield, tokens, activeId, selectedId, highlights, cell = 34, terrain, onCellClick, onTokenClick }: Props) {
+  const classes = terrain ?? TERRAIN_CLASS;
   const { width, height, map } = battlefield;
   const cells = [];
   for (let y = 0; y < height; y++) {
@@ -52,7 +57,7 @@ export function BattleGrid({ battlefield, tokens, activeId, selectedId, highligh
       cells.push(
         <div
           key={`${x},${y}`}
-          className={`cell ${TERRAIN_CLASS[glyph] ?? 'wall'} ${hl ?? ''}`}
+          className={`cell ${classes[glyph] ?? 'wall'} ${hl ?? ''}`}
           style={{ left: x * cell, top: y * cell, width: cell, height: cell }}
           onClick={() => onCellClick?.({ x, y })}
           title={`(${x}, ${y})`}
@@ -65,7 +70,7 @@ export function BattleGrid({ battlefield, tokens, activeId, selectedId, highligh
       <div className="grid" style={{ width: width * cell, height: height * cell }}>
         {cells}
         {tokens.map((t) => {
-          const sq = SIZE_SQUARES[t.size ?? 'medium'] ?? 1;
+          const sq = t.squares ?? SIZE_SQUARES[t.size ?? 'medium'] ?? 1;
           const hpPct = t.maxHp ? Math.max(0, (100 * (t.hp ?? 0)) / t.maxHp) : 100;
           return (
             <div

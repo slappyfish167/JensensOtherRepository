@@ -1,6 +1,6 @@
 // Thin typed client for the REST API (see docs/API.md).
 import type {
-  BuildResult, Character, CharacterSummary, CombatRecord, CombatView, Command, Content, DiceMode, Encounter,
+  ActionView, AnyCombatView, BuildResult, Character, CharacterSummary, CombatRecord, CombatView, Command, Content, DiceMode, DocumentSummary, Encounter, SystemId, SystemInfo,
   EncounterBudget, EncounterSummary, Evaluation, LegalAction, Monster, MonsterSummary, SimulationReport,
   SpellAssessment, Strategy, TargetAssessment, TurnRecommendation, Side,
 } from './types';
@@ -58,9 +58,22 @@ export const api = {
   deleteEncounter: (id: string) => del<{ deleted: boolean }>(`/api/encounters/${id}`),
   budget: (e: Encounter) => post<EncounterBudget>('/api/encounters/budget', e),
 
+  systems: () => get<SystemInfo[]>('/api/systems'),
+  systemContent: (system: SystemId) => get<Record<string, unknown>>(`/api/systems/${system}/content`),
+  listDocs: (system: SystemId, kind: 'actors' | 'encounters') => get<DocumentSummary[]>(`/api/systems/${system}/${kind}`),
+  getDoc: <T = Record<string, unknown>>(system: SystemId, kind: 'actors' | 'encounters', id: string) => get<T>(`/api/systems/${system}/${kind}/${id}`),
+  saveDoc: <T extends { id?: string }>(system: SystemId, kind: 'actors' | 'encounters', doc: T) =>
+    doc.id ? put<T>(`/api/systems/${system}/${kind}/${doc.id}`, doc) : post<T>(`/api/systems/${system}/${kind}`, doc),
+  deleteDoc: (system: SystemId, kind: 'actors' | 'encounters', id: string) => del<{ deleted: boolean }>(`/api/systems/${system}/${kind}/${id}`),
+
   listCombats: () => get<CombatRecord[]>('/api/combats'),
-  createCombat: (encounter_id: string, dice: DiceMode) => post<CombatView>('/api/combats', { encounter_id, dice }),
+  createCombat: (encounter_id: string, dice: DiceMode, system: SystemId = 'pf2e') => post<AnyCombatView>('/api/combats', { system, encounter_id, dice }),
   getCombat: (id: string) => get<CombatView>(`/api/combats/${id}`),
+  getAnyCombat: (id: string) => get<AnyCombatView>(`/api/combats/${id}`),
+  commandAny: (id: string, cmd: unknown) => post<AnyCombatView>(`/api/combats/${id}/commands`, cmd),
+  autoRollAny: (id: string) => post<AnyCombatView>(`/api/combats/${id}/auto-roll`),
+  undoAny: (id: string) => post<AnyCombatView>(`/api/combats/${id}/undo`),
+  actions: (id: string) => get<ActionView[]>(`/api/combats/${id}/actions`),
   deleteCombat: (id: string) => del<{ deleted: boolean }>(`/api/combats/${id}`),
   command: (id: string, cmd: Command) => post<CombatView>(`/api/combats/${id}/commands`, cmd),
   autoRoll: (id: string) => post<CombatView>(`/api/combats/${id}/auto-roll`),

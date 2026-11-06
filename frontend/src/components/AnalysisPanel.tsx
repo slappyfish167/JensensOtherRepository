@@ -1,19 +1,27 @@
 import { useState } from 'react';
 import { api } from '../api/client';
-import type { Action, CombatView, Evaluation, SimulationReport, SpellAssessment, Strategy, TargetAssessment, TurnRecommendation } from '../api/types';
-import { evalText, nameOf } from '../lib/format';
+import type { Action, CombatantId, Evaluation, SimulationReport, SpellAssessment, Strategy, TargetAssessment, TurnRecommendation } from '../api/types';
+import { evalText } from '../lib/format';
 import { TacticalReportView } from './TacticalReportView';
 
 type Tab = 'eval' | 'best' | 'targets' | 'spells' | 'tpk' | 'strategy';
 
 interface Props {
-  view: CombatView;
+  combatId: string;
+  /** Combat running and no input pending. */
+  ready: boolean;
+  /** Combat running (input may be pending). */
+  active: boolean;
+  currentActor: CombatantId | null;
+  actorName: string;
+  /** The system has spellcasting (shows the Spells tab). */
+  spells?: boolean;
   evaluation: Evaluation | null;
   onPlay: (action: Action) => void;
 }
 
-/** Engine analysis: the questions from the brief, one tab each. */
-export function AnalysisPanel({ view, evaluation, onPlay }: Props) {
+/** Engine analysis for any game system: the questions from the brief, one tab each. */
+export function AnalysisPanel({ combatId, ready, active, currentActor, actorName, spells: hasSpells = true, evaluation, onPlay }: Props) {
   const [tab, setTab] = useState<Tab>('eval');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -23,8 +31,7 @@ export function AnalysisPanel({ view, evaluation, onPlay }: Props) {
   const [tpk, setTpk] = useState<SimulationReport | null>(null);
   const [strategy, setStrategy] = useState<Strategy | null>(null);
   const [runs, setRuns] = useState(200);
-  const id = view.id;
-  const ready = view.state.phase.kind === 'active' && !view.pending;
+  const id = combatId;
 
   async function go<T>(f: () => Promise<T>, set: (v: T) => void) {
     setBusy(true);
@@ -38,9 +45,9 @@ export function AnalysisPanel({ view, evaluation, onPlay }: Props) {
     }
   }
 
-  const tabs: [Tab, string][] = [
+  const tabs = ([
     ['eval', 'Evaluation'], ['best', 'Best turn'], ['targets', 'Targets'], ['spells', 'Spells'], ['tpk', 'TPK odds'], ['strategy', 'Strategy'],
-  ];
+  ] as [Tab, string][]).filter(([t]) => t !== 'spells' || hasSpells);
   return (
     <div className="panel analysis">
       <div className="tabs">
@@ -79,7 +86,7 @@ export function AnalysisPanel({ view, evaluation, onPlay }: Props) {
             <div>
               <TacticalReportView report={best.report} />
               <p className="muted small">{best.plan.nodes.toLocaleString()} nodes{best.plan.truncated ? ' (budget reached)' : ''} · gain {best.plan.gain >= 0 ? '+' : ''}{best.plan.gain.toFixed(2)}</p>
-              {best.plan.actions[0] && ready && view.current_actor === best.plan.actor && (
+              {best.plan.actions[0] && ready && currentActor === best.plan.actor && (
                 <button className="primary" onClick={() => { onPlay(best.plan.actions[0]); setBest(null); }}>Play first action</button>
               )}
             </div>
@@ -89,7 +96,7 @@ export function AnalysisPanel({ view, evaluation, onPlay }: Props) {
 
       {tab === 'targets' && (
         <div>
-          <button disabled={busy || view.state.phase.kind !== 'active'} onClick={() => go(() => api.targets(id), setTargets)}>
+          <button disabled={busy || !active} onClick={() => go(() => api.targets(id), setTargets)}>
             What is the strongest target?
           </button>
           {targets && (
@@ -114,7 +121,7 @@ export function AnalysisPanel({ view, evaluation, onPlay }: Props) {
       {tab === 'spells' && (
         <div>
           <button disabled={busy || !ready} onClick={() => go(() => api.spells(id), setSpells)}>Which spell maximizes expected value?</button>
-          {spells && spells.length === 0 && <p className="muted">No castable spells for {nameOf(view.state, view.current_actor)}.</p>}
+          {spells && spells.length === 0 && <p className="muted">No castable spells for {actorName}.</p>}
           {spells && spells.length > 0 && (
             <table>
               <thead><tr><th>Spell</th><th>Δ eval</th><th>Exp. dmg</th><th>Healing</th><th>Kill</th><th /></tr></thead>
@@ -159,7 +166,7 @@ export function AnalysisPanel({ view, evaluation, onPlay }: Props) {
 
       {tab === 'strategy' && (
         <div>
-          <button disabled={busy || view.state.phase.kind !== 'active'} onClick={() => go(() => api.strategy(id, 'enemy'), setStrategy)}>
+          <button disabled={busy || !active} onClick={() => go(() => api.strategy(id, 'enemy'), setStrategy)}>
             {busy ? 'Thinking…' : 'What is the optimal monster strategy?'}
           </button>
           {strategy && (
