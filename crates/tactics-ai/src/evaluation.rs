@@ -6,7 +6,9 @@
 //! The log-ratio of the two strengths is the *logit*; the score is
 //! `10 · tanh(logit / 2)` and the win estimate is `σ(1.6 · logit)`.
 //!
-//! `H` and `O` come from the system ([`TacticalSystem::effective_hp`],
+//! `O` is measured against the opposing roster as a whole (downed members
+//! included), so it is a property of the attackers, not of who happens to be
+//! left standing. `H` and `O` come from the system ([`TacticalSystem::effective_hp`],
 //! [`TacticalSystem::round_damage`], ...), so conditions, armor, cover and
 //! resources enter through each system's own rules.
 
@@ -86,7 +88,7 @@ impl<S> Default for HeuristicEvaluator<S> {
 
 impl<S> Clone for HeuristicEvaluator<S> {
     fn clone(&self) -> Self {
-        Self::new(self.options)
+        *self
     }
 }
 
@@ -109,7 +111,10 @@ impl<S: TacticalSystem> HeuristicEvaluator<S> {
         let units = S::units(s);
         let mut out = [SideSummary::default(), SideSummary::default()];
         for (i, side) in [Side::Party, Side::Enemy].into_iter().enumerate() {
-            let foes: Vec<_> = fighters(&units).filter(|c| side.is_hostile_to(c.side) && !c.down).collect();
+            // Offense is measured against the whole opposing roster, downed
+            // members included: dropping the softest enemy must never make
+            // your own side look weaker just because harder targets remain.
+            let foes: Vec<_> = fighters(&units).filter(|c| side.is_hostile_to(c.side)).collect();
             let sum = &mut out[i];
             for c in fighters(&units).filter(|c| c.side == side) {
                 if c.down {

@@ -388,13 +388,13 @@ async fn create_combat(State(app): State<SharedApp>, Json(req): Json<CreateComba
             };
             let state = app.combat_state_for(&e)?;
             let saved = req.encounter_id.as_ref().map(|_| e.id.clone());
-            ok(app.create_combat::<Pf2e>(saved, req.name.unwrap_or(e.name.clone()), state, req.dice, AnySession::Pf2e)?)
+            ok(app.create_combat::<Pf2e>(saved, req.name.unwrap_or(e.name.clone()), state, req.dice, |s| AnySession::Pf2e(Box::new(s)))?)
         }
         "cpred" => {
             let e = app.cpred_encounter(req.encounter_id.as_deref(), req.encounter)?;
             let state = app.cpred_state_for(&e)?;
             let saved = req.encounter_id.as_ref().map(|_| e.id.clone());
-            ok(app.create_combat::<CyberpunkRed>(saved, req.name.unwrap_or(e.name.clone()), state, req.dice, AnySession::Cpred)?)
+            ok(app.create_combat::<CyberpunkRed>(saved, req.name.unwrap_or(e.name.clone()), state, req.dice, |s| AnySession::Cpred(Box::new(s)))?)
         }
         other => Err(ApiError::not_found(format!("game system '{other}'"))),
     }

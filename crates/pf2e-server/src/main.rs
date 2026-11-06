@@ -1,4 +1,4 @@
-//! PF2e Combat Engine server.
+//! Tabletop Combat Engine server (Pathfinder 2e, Cyberpunk RED, ...).
 //!
 //! Environment:
 //! * `PF2E_DB`         SQLite file (default `pf2e.sqlite`; `:memory:` for ephemeral)
@@ -37,7 +37,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("serving frontend from {static_dir}");
     }
     let listener = tokio::net::TcpListener::bind(&addr).await?;
-    println!("PF2e combat engine listening on http://{addr} (db: {db})");
+    println!("Tabletop combat engine listening on http://{addr} (db: {db})");
     axum::serve(listener, router).await?;
     Ok(())
 }

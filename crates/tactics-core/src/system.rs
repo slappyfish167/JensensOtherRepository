@@ -10,6 +10,10 @@ use serde::de::DeserializeOwned;
 use serde::Serialize;
 use std::fmt::Debug;
 
+/// The outcome of replaying a log: the final state and every event, or the
+/// index of the failing command and why it failed.
+pub type ReplayResult<S> = Result<(<S as GameSystem>::State, Vec<<S as GameSystem>::Event>), (usize, String)>;
+
 pub trait GameSystem: Sized + Send + Sync + 'static {
     /// Stable identifier used in URLs and storage, e.g. `pf2e`, `cpred`.
     const ID: &'static str;
@@ -87,7 +91,7 @@ pub trait GameSystem: Sized + Send + Sync + 'static {
     }
 
     /// Re-applies a command log. Error: (index of the failing command, reason).
-    fn replay(initial: &Self::State, commands: &[Self::Command]) -> Result<(Self::State, Vec<Self::Event>), (usize, String)> {
+    fn replay(initial: &Self::State, commands: &[Self::Command]) -> ReplayResult<Self> {
         let mut s = initial.clone();
         let mut events = Vec::new();
         for (i, c) in commands.iter().enumerate() {

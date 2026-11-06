@@ -305,17 +305,19 @@ impl Store for SqliteStore {
             DiceMode::Manual => ("manual", None),
             DiceMode::Seeded { seed } => ("seeded", Some(seed as i64)),
         };
+        // PF2e encounters have a table (foreign key); other systems' are documents.
+        let (fk, doc_ref) = if rec.system == "pf2e" { (rec.encounter_id.clone(), None) } else { (None, rec.encounter_id.clone()) };
         self.conn.execute(
-            "INSERT INTO combats (id, encounter_id, name, dice_mode, dice_seed, initial_state, status, created_at, updated_at, system)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?8, ?9)",
-            params![rec.id, rec.encounter_id, rec.name, mode, seed, serde_json::to_string(initial)?, rec.status, rec.created_at, rec.system],
+            "INSERT INTO combats (id, encounter_id, name, dice_mode, dice_seed, initial_state, status, created_at, updated_at, system, encounter_ref)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?8, ?9, ?10)",
+            params![rec.id, fk, rec.name, mode, seed, serde_json::to_string(initial)?, rec.status, rec.created_at, rec.system, doc_ref],
         )?;
         Ok(())
     }
 
     fn list_combats(&self) -> StoreResult<Vec<CombatRecord>> {
         let mut st = self.conn.prepare(
-            "SELECT id, encounter_id, name, dice_mode, dice_seed, status, created_at, updated_at, system FROM combats ORDER BY created_at DESC, id",
+            "SELECT id, COALESCE(encounter_id, encounter_ref), name, dice_mode, dice_seed, status, created_at, updated_at, system FROM combats ORDER BY created_at DESC, id",
         )?;
         let rows = st.query_map([], row_to_record)?;
         Ok(rows.collect::<Result<_, _>>()?)
@@ -325,7 +327,7 @@ impl Store for SqliteStore {
         let row = self
             .conn
             .query_row(
-                "SELECT id, encounter_id, name, dice_mode, dice_seed, status, created_at, updated_at, system, initial_state FROM combats WHERE id = ?1",
+                "SELECT id, COALESCE(encounter_id, encounter_ref), name, dice_mode, dice_seed, status, created_at, updated_at, system, initial_state FROM combats WHERE id = ?1",
                 [id],
                 |r| Ok((row_to_record(r)?, r.get::<_, String>(9)?)),
             )

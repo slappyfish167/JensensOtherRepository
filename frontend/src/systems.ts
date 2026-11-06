@@ -21,5 +21,14 @@ export const CPRED: SystemUi = {
     ['#', 'wall', 'wall'],
     ['%', 'cover', 'cover object'],
   ],
-  actorTemplate: {}, // filled in below once the model is known
+  // Empty: "New actor" starts from a copy of an existing actor, so the
+  // template always matches the engine's model.
+  actorTemplate: {},
+  summarizeActor: (doc) => {
+    const sb = (doc.statblock ?? {}) as { stats?: Record<string, number>; max_hp?: number | null; weapons?: { name: string }[] };
+    const st = sb.stats ?? {};
+    const hp = sb.max_hp ?? 10 + 5 * Math.ceil(((st.body ?? 0) + (st.will ?? 0)) / 2);
+    const weapons = (sb.weapons ?? []).map((w) => w.name).join(', ');
+    return `${String(doc.kind ?? 'npc').toUpperCase()} · REF ${st.ref ?? '?'} · DEX ${st.dex ?? '?'} · BODY ${st.body ?? '?'} · MOVE ${st.move ?? '?'} · ${hp} HP${weapons ? ` · ${weapons}` : ''}`;
+  },
 };

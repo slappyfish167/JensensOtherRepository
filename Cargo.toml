@@ -36,3 +36,8 @@ pf2e-store = { path = "crates/pf2e-store" }
 
 [profile.release]
 debug = false
+
+# The analysis tests run real expectiminimax searches and Monte Carlo
+# simulations; unoptimized they take minutes. Optimize test builds.
+[profile.test]
+opt-level = 2

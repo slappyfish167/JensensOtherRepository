@@ -6,7 +6,7 @@
 //!   human (or by an external, opt-in seeded roller) as a command.
 //! * **Serializable**: every model and the entire combat state are serde types.
 //! * **Replayable**: `initial state + command log` reproduces a combat exactly
-//!   (see [`combat::replay`]).
+//!   (see [`combat::replay()`]).
 //!
 //! Layout:
 //! * [`model`] — statblocks, weapons, armor, battlefields, encounters.

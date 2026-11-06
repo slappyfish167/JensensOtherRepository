@@ -1,4 +1,11 @@
-# Tactical analysis (`pf2e-ai`)
+# Tactical analysis (`tactics-ai`)
+
+The analysis layer is **system-neutral**. `crates/tactics-ai` holds the evaluator, the committed
+search, the tactical report, target ranking, side strategy and Monte Carlo, all generic over the
+`TacticalSystem` trait. `crates/pf2e-ai` and `crates/cpred-ai` implement that trait for Pathfinder
+2e and Cyberpunk RED (see [SYSTEMS.md](SYSTEMS.md) and [CYBERPUNK_RED.md](CYBERPUNK_RED.md)).
+The PF2e specifics below (Strikes, MAP, spell slots) are what `pf2e-ai` feeds into the generic
+model; Cyberpunk RED feeds ROF attacks, armor SP, cover and ammunition into the same slots.
 
 The analysis layer is optional and **contains no rules**. It reads state, asks the engine for
 `legal_actions()`, and simulates by calling `apply_in_place` on cloned states. Expected-value helpers
@@ -13,10 +20,13 @@ Model: **Lanchester's square law**. A side's fighting strength is `H × O`:
 * `H` — effective hit points: HP + temp HP of standing members, minus expected persistent damage
   (average × 1/0.3 ticks, the DC 15 flat-check expectation).
 * `O` — expected damage per round: for every standing member, the best full-round plan against each
-  standing enemy (`round_damage`: best Strike at each MAP step, or a damaging spell — only if a slot
-  remains — plus the remaining Strikes), scaled by an **engagement factor** (rounds lost closing
-  distance) and an **action factor** (slowed, stunned, quickened, unconscious), averaged between the
-  mean and the best target.
+  member of the opposing roster (`round_damage`: best Strike at each MAP step, or a damaging spell —
+  only if a slot remains — plus the remaining Strikes), scaled by an **engagement factor** (rounds
+  lost closing distance) and an **action factor** (slowed, stunned, quickened, unconscious),
+  averaged between the mean and the best target. The opposing roster **includes downed members**:
+  offense is a property of the attackers, so dropping the softest enemy never makes your own side
+  look weaker just because harder targets remain. (Averaging over standing enemies only made
+  "finish the wounded PC" score worse than doing nothing whenever the survivors were armored.)
 * **Tempo**: the creature whose turn it is gets half its remaining-action damage credited against
   the other side's `H`.
 
@@ -31,10 +41,11 @@ tested) and conditions need no special cases: frightened lowers the frightened c
 and AC inside the core's modifier computation, which changes `O` on both sides.
 
 **Factor breakdown** (`evaluate_detailed`) is counterfactual — each factor is the change in score
-when that aspect is neutralised: Hit points, Offense vs defense, Conditions (clear all non-dying
-conditions/effects/persistent damage), Action economy (remove tempo and slowed/stunned/quickened),
-Position (assume everyone engaged), Resources (empty all spell slots), Battlefield control
-(remove obscuring terrain and auto-cover).
+when that aspect is neutralised. Generic: Hit points, Offense vs defense, Position (assume everyone
+engaged). Each system adds its own through `TacticalSystem::counterfactuals`. PF2e adds Conditions
+(clear all non-dying conditions/effects/persistent damage), Action economy (remove tempo and
+slowed/stunned/quickened), Resources (empty all spell slots) and Battlefield control (remove
+obscuring terrain and auto-cover). Cyberpunk RED adds Cover, Armor, Ammunition and Wounds.
 
 ## 2. "What is the best 3-action turn?" — expectiminimax
 
@@ -138,7 +149,7 @@ multi-target saves grow fastest (4ⁿ save outcomes); the budget keeps them boun
 |---|---|---|
 | Strongest target | `queries::rank_targets` | expected damage this turn (`round_damage` × engagement × actions), kill probability (enumerates hit/crit/miss for up to three Strikes), target threat (its own damage/round vs our side). `priority = threat × (P(kill) + E[dmg]/HP)` — threat removed per point of damage. |
 | Best spell | `queries::rank_spells` | for every castable spell option: one-ply expectiminimax gain in evaluation, plus exact expectations over the chance tree of enemy HP lost, ally HP healed and P(an enemy drops). |
-| TPK odds | `simulate::simulate` | Monte Carlo: seeded dice + a fast scripted policy for every creature (best immediate expected value, else close distance; hostile creatures then fall back to their best remaining attack, a defensive action, or any legal action instead of ending the turn). Reports win/TPK/death rates per side and per creature. Deterministic for a given seed. |
+| TPK odds | `simulate::simulate` | Monte Carlo (system-neutral driver, system-specific policy): seeded dice + a fast scripted policy for every creature (best immediate expected value, else close distance; hostile creatures then fall back to their best remaining attack, a defensive action, or any legal action instead of ending the turn). Reports win/TPK/death rates per side and per creature. Deterministic for a given seed. |
 | Monster strategy | `queries::side_strategy` | for every creature on the side: `hypothetical_turn` (the core's start-of-turn on a copy) + best-turn search; a focus target chosen by summed target priorities; the biggest evaluation swing factor. |
 
 ## 4. Extending
@@ -148,3 +159,6 @@ multi-target saves grow fastest (4ⁿ save outcomes); the budget keeps them boun
 * Swap the scripted Monte Carlo policy for `best_turn` with a small budget for stronger (slower)
   simulations.
 * The same search works for PCs: ask for the best turn on a PC's turn to get advice for players.
+* A new game system gets all of the above by implementing `TacticalSystem` (see SYSTEMS.md).
+  `TacticalSystem::may_stop` lets a system mark the rest of a turn as optional (Cyberpunk RED: once
+  the Action is spent), without ever allowing an empty turn.

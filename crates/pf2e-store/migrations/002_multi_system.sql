@@ -7,6 +7,9 @@
 --     so adding a game system needs no schema change.
 
 ALTER TABLE combats ADD COLUMN system TEXT NOT NULL DEFAULT 'pf2e';
+-- `encounter_id` references the PF2e encounters table; other systems'
+-- encounters are documents, referenced here instead (no foreign key).
+ALTER TABLE combats ADD COLUMN encounter_ref TEXT NULL;
 CREATE INDEX IF NOT EXISTS idx_combats_system ON combats (system);
 
 CREATE TABLE IF NOT EXISTS documents (

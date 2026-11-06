@@ -5,7 +5,7 @@ import type { DocumentSummary, SystemId } from '../api/types';
 interface Props {
   system: SystemId;
   systemName: string;
-  /** Starting point for a new actor. */
+  /** Starting point for a new actor (empty: copy the first stored actor). */
   template: Record<string, unknown>;
   /** One-line summary of an actor document. */
   summarize?: (doc: Record<string, unknown>) => string;
@@ -33,6 +33,18 @@ export function SystemActorsPage({ system, systemName, template, summarize }: Pr
     setMsg(null);
   }
 
+  async function newActor() {
+    let base = template;
+    if (Object.keys(base).length === 0 && list[0]) {
+      try {
+        base = await api.getDoc(system, 'actors', list[0].id);
+      } catch {
+        base = {};
+      }
+    }
+    open({ ...structuredClone(base), id: '', name: 'New actor' });
+  }
+
   async function save() {
     try {
       const parsed = JSON.parse(text) as Record<string, unknown>;
@@ -48,7 +60,7 @@ export function SystemActorsPage({ system, systemName, template, summarize }: Pr
   return (
     <div className="page split">
       <aside>
-        <button className="primary" onClick={() => open({ ...structuredClone(template), id: '' })}>New actor</button>
+        <button className="primary" onClick={newActor}>New actor</button>
         <ul className="list">
           {list.map((a) => (
             <li key={a.id} className={doc?.id === a.id ? 'on' : ''} onClick={() => api.getDoc(system, 'actors', a.id).then(open)}>

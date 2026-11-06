@@ -33,8 +33,8 @@ pub struct Session<S: GameSystem> {
 /// Every supported game system. Add a variant (and an arm to [`with_session!`])
 /// to support another one.
 pub enum AnySession {
-    Pf2e(Session<Pf2e>),
-    Cpred(Session<cpred_ai::CyberpunkRed>),
+    Pf2e(Box<Session<Pf2e>>),
+    Cpred(Box<Session<cpred_ai::CyberpunkRed>>),
 }
 
 /// Runs `$body` with `$s` bound to the typed session, whatever its system.
@@ -226,17 +226,10 @@ impl<S: GameSystem> Session<S> {
 }
 
 impl AnySession {
-    pub fn system(&self) -> &'static str {
-        match self {
-            AnySession::Pf2e(_) => Pf2e::ID,
-            AnySession::Cpred(_) => cpred_ai::CyberpunkRed::ID,
-        }
-    }
-
     fn load(record: CombatRecord, log: StoredLog) -> ApiResult<Self> {
         Ok(match record.system.as_str() {
-            Pf2e::ID => AnySession::Pf2e(Session::from_log(record, log)?),
-            cpred_ai::CyberpunkRed::ID => AnySession::Cpred(Session::from_log(record, log)?),
+            Pf2e::ID => AnySession::Pf2e(Box::new(Session::from_log(record, log)?)),
+            cpred_ai::CyberpunkRed::ID => AnySession::Cpred(Box::new(Session::from_log(record, log)?)),
             other => return Err(internal(format!("combat uses unknown game system '{other}'"))),
         })
     }
@@ -325,6 +318,41 @@ impl App {
         CombatSetup::default().build(e.battlefield.clone(), parts, &self.content).map_err(|err| ApiError::bad_request(err.to_string()))
     }
 
+    // ----- Cyberpunk RED encounters (document-backed) ----------------------------
+
+    /// Bundled actors overlaid with the ones stored in the database.
+    fn cpred_content(&self) -> ApiResult<cpred_core::content::Content> {
+        let mut content = self.cpred.clone();
+        let store = self.store();
+        for d in store.list_documents(cpred_ai::CyberpunkRed::ID, "actor")? {
+            let Some(doc) = store.get_document(cpred_ai::CyberpunkRed::ID, "actor", &d.id)? else { continue };
+            let actor: cpred_core::model::Actor = serde_json::from_value(doc).map_err(|e| internal(format!("stored actor '{}' does not decode: {e}", d.id)))?;
+            content.actors.retain(|a| a.id != actor.id);
+            content.actors.push(actor);
+        }
+        Ok(content)
+    }
+
+    /// A Cyberpunk RED encounter: stored, bundled sample, or inline.
+    pub fn cpred_encounter(&self, id: Option<&str>, inline: Option<Value>) -> ApiResult<cpred_core::model::Encounter> {
+        match (id, inline) {
+            (Some(id), _) => {
+                if let Some(doc) = self.store().get_document(cpred_ai::CyberpunkRed::ID, "encounter", id)? {
+                    return Ok(serde_json::from_value(doc)?);
+                }
+                self.cpred.encounter(id).cloned().ok_or_else(|| ApiError::not_found(format!("Cyberpunk RED encounter '{id}'")))
+            }
+            (None, Some(v)) => Ok(serde_json::from_value(v)?),
+            (None, None) => Err(ApiError::bad_request("give encounter_id or encounter")),
+        }
+    }
+
+    pub fn cpred_state_for(&self, e: &cpred_core::model::Encounter) -> ApiResult<cpred_core::combat::CombatState> {
+        let content = self.cpred_content()?;
+        let parts = content.participants(e).map_err(|err| ApiError::bad_request(err.to_string()))?;
+        cpred_core::combat::CombatSetup::build(e.battlefield.clone(), parts, &content).map_err(|err| ApiError::bad_request(err.to_string()))
+    }
+
     // ----- combats --------------------------------------------------------------
 
     fn record(&self, system: &str, encounter_id: Option<String>, name: String, dice: DiceMode) -> CombatRecord {
@@ -379,14 +407,6 @@ impl App {
                 AnySession::Pf2e(s) => Snapshot::Pf2e(s.state.clone()),
                 AnySession::Cpred(s) => Snapshot::Cpred(s.state.clone()),
             })
-        })
-    }
-
-    /// A PF2e combat's state (for PF2e-only endpoints).
-    pub fn pf2e_snapshot(&self, id: &str) -> ApiResult<CombatState> {
-        self.with(id, |s, _| match s {
-            AnySession::Pf2e(s) => Ok(s.state.clone()),
-            other => Err(ApiError::conflict(format!("this endpoint is for Pathfinder 2e combats; combat '{id}' is {}", other.system()))),
         })
     }
 }
