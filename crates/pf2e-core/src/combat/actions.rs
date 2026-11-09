@@ -172,6 +172,10 @@ impl CombatState {
                 if tc.conditions.has(CK::Prone) {
                     return illegal("target is already prone");
                 }
+                // Trip: "Your target can't be more than one size larger than you."
+                if (tc.statblock.size as u8) > (a.statblock.size as u8) + 1 {
+                    return illegal("target is more than one size larger");
+                }
                 let reach = a.statblock.melee_reach().unwrap_or(5);
                 if !within_reach(a.position, a.statblock.size, tc.position, tc.statblock.size, reach) {
                     return illegal("target is out of reach");

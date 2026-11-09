@@ -109,10 +109,17 @@ pub fn typical_targets(state: &CombatState, spell_id: &str) -> f64 {
 /// Best expected damage `attacker` can deal `target` in a full 3-action
 /// round from its current position, ignoring movement.
 pub fn round_damage(state: &CombatState, attacker: CombatantId, target: CombatantId, include_spells: bool) -> f64 {
+    round_damage_with_actions(state, attacker, target, include_spells, 3)
+}
+
+/// [`round_damage`] for a round in which the attacker has only `actions`
+/// (0..=3) actions to spend on attacking.
+pub fn round_damage_with_actions(state: &CombatState, attacker: CombatantId, target: CombatantId, include_spells: bool, actions: usize) -> f64 {
+    let actions = actions.min(3);
     let a = state.combatant(attacker).expect("attacker");
     let n = a.statblock.strikes.len();
     let mut per_slot = [0.0f64; 3];
-    for (slot, best) in per_slot.iter_mut().enumerate() {
+    for (slot, best) in per_slot.iter_mut().enumerate().take(actions) {
         for i in 0..n {
             *best = best.max(expected_strike(state, attacker, target, i, slot as u8, CoverLevel::None));
         }
@@ -131,16 +138,105 @@ pub fn round_damage(state: &CombatState, attacker: CombatantId, target: Combatan
             }
         }
         for (sid, rank) in opts {
-            let actions = state.spells.get(sid).map(|s| s.actions).unwrap_or(2) as usize;
-            if actions > 3 {
+            let cost = state.spells.get(sid).map(|s| s.actions).unwrap_or(2) as usize;
+            if cost > actions {
                 continue;
             }
             let ev = expected_spell(state, attacker, target, ei, sid, rank) * typical_targets(state, sid);
-            let rest: f64 = per_slot.iter().take(3 - actions).sum();
+            let rest: f64 = per_slot.iter().take(actions - cost).sum();
             best_spell = best_spell.max(ev + rest);
         }
     }
     strikes.max(best_spell)
+}
+
+/// Share of the rest of the fight a prone creature's next turn represents:
+/// it spends that turn's first action to Stand.
+pub const STAND_TAX_WEIGHT: f64 = 1.0 / 3.0;
+/// Share of the rest of the fight during which a prone creature is
+/// off-guard: only attackers who act before its next turn benefit.
+pub const PRONE_TARGET_WEIGHT: f64 = 1.0 / 6.0;
+
+/// Share of the rest of the fight that frightened `value` is in force.
+/// Frightened drops by 1 at the end of each of the creature's turns, so its
+/// penalty summed over the next three rounds is `v + (v−1) + …`; spreading
+/// that over three rounds at the full value `v` gives `(v + 1) / 6`.
+pub fn frightened_weight(value: u8) -> f64 {
+    ((value as f64 + 1.0) / 6.0).min(1.0)
+}
+
+/// Expected damage per round of `attacker` against `target` *for the rest
+/// of the fight*, which is what position evaluation needs.
+///
+/// [`round_damage`] reads conditions as they are right now. Some of them
+/// last only until the creature's next turn: a prone creature Stands as its
+/// first action, and frightened decays each turn. Treating them as
+/// permanent made Trip and Demoralize look worth more than a solid hit, so
+/// the engine recommended them every turn. Here each such condition counts
+/// only for the share of the fight it is actually in force:
+///
+/// * the baseline is the round with both creatures standing and unafraid;
+/// * an attacker that is prone loses one action next turn (Stand), weighted
+///   by [`STAND_TAX_WEIGHT`]; the −2 prone attack penalty is never paid,
+///   since it stands before attacking;
+/// * a prone target is off-guard until it stands ([`PRONE_TARGET_WEIGHT`]);
+/// * frightened on either side counts for [`frightened_weight`].
+///
+/// Every term is still computed by [`round_damage`] from core rules; only
+/// the weighting is a heuristic. With no such conditions on either creature
+/// this is exactly [`round_damage`].
+pub fn sustained_round_damage(state: &CombatState, attacker: CombatantId, target: CombatantId, include_spells: bool) -> f64 {
+    use pf2e_core::conditions::ConditionKind as CK;
+    let (Some(a), Some(t)) = (state.combatant(attacker), state.combatant(target)) else { return 0.0 };
+    // Only conditions held directly count: an unconscious creature is
+    // implicitly prone, but it is down and does not Stand.
+    let prone = |c: &Combatant| !c.is_down() && c.conditions.get(CK::Prone).is_some();
+    let a_prone = prone(a);
+    let t_prone = prone(t);
+    let a_fright = if a.is_down() { 0 } else { a.conditions.value(CK::Frightened) };
+    let t_fright = if t.is_down() { 0 } else { t.conditions.value(CK::Frightened) };
+    if !a_prone && !t_prone && a_fright == 0 && t_fright == 0 {
+        return round_damage(state, attacker, target, include_spells);
+    }
+
+    let mut base = state.clone();
+    for id in [attacker, target] {
+        if let Some(c) = base.combatants.iter_mut().find(|c| c.id == id) {
+            if prone(c) {
+                c.conditions.remove(CK::Prone);
+            }
+            if !c.is_down() {
+                c.conditions.remove(CK::Frightened);
+            }
+        }
+    }
+    let steady = round_damage(&base, attacker, target, include_spells);
+    let mut total = steady;
+    let mut variant = |w: f64, edit: &dyn Fn(&mut CombatState), actions: usize| {
+        let mut v = base.clone();
+        edit(&mut v);
+        total += w * (round_damage_with_actions(&v, attacker, target, include_spells, actions) - steady);
+    };
+    let restore = |id: CombatantId, kind: CK, value: u8| {
+        move |s: &mut CombatState| {
+            if let Some(c) = s.combatants.iter_mut().find(|c| c.id == id) {
+                c.conditions.add(pf2e_core::conditions::Condition::new(kind, value));
+            }
+        }
+    };
+    if a_prone {
+        variant(STAND_TAX_WEIGHT, &|_| {}, 2);
+    }
+    if t_prone && attacker != target {
+        variant(PRONE_TARGET_WEIGHT, &restore(target, CK::Prone, 0), 3);
+    }
+    if a_fright > 0 {
+        variant(frightened_weight(a_fright), &restore(attacker, CK::Frightened, a_fright), 3);
+    }
+    if t_fright > 0 && attacker != target {
+        variant(frightened_weight(t_fright), &restore(target, CK::Frightened, t_fright), 3);
+    }
+    total.max(0.0)
 }
 
 /// Fraction of a first round the attacker keeps after closing to `target`.

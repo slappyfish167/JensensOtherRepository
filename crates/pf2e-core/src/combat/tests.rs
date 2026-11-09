@@ -574,3 +574,25 @@ fn legal_actions_are_all_accepted() {
         probe.apply(&Command::Act { actor: B, action: a.clone() }).unwrap_or_else(|e| panic!("{a:?}: {e}"));
     }
 }
+
+#[test]
+fn trip_target_at_most_one_size_larger() {
+    use crate::stats::Size;
+    let mut large = statblock("Ogre", 50, 17, 10, "1d10+5");
+    large.size = Size::Large;
+    let mut huge = statblock("Giant", 90, 19, 14, "2d10+7");
+    huge.size = Size::Huge;
+    let mut s = build(vec![
+        participant(statblock("Hero", 20, 18, 9, "1d8+4"), Side::Party, 4, 4),
+        participant(large, Side::Enemy, 5, 3),
+        participant(huge, Side::Enemy, 1, 4),
+    ]);
+    start(&mut s, &[20, 1, 1]);
+    let trip = |t: u32| Command::Act { actor: A, action: Action::Trip { target: CombatantId(t) } };
+    assert!(s.legal_actions().contains(&Action::Trip { target: CombatantId(2) }), "one size larger is fine");
+    let before = s.clone();
+    let err = s.apply(&trip(3)).unwrap_err().to_string();
+    assert!(err.contains("more than one size larger"), "{err}");
+    assert_eq!(s, before);
+    assert!(s.apply(&trip(2)).is_ok());
+}

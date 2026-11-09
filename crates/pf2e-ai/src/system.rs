@@ -4,7 +4,7 @@
 //! number comes from `pf2e-core` or the expected-value helpers in
 //! [`crate::analysis`], which are themselves built on core rule functions.
 
-use crate::analysis::{action_factor, engagement_factor, round_damage};
+use crate::analysis::{action_factor, engagement_factor, sustained_round_damage};
 use crate::movegen::MoveGenConfig;
 use crate::queries::{describe_action, flanked_from, kill_probability};
 use pf2e_core::checks::representative_faces;
@@ -343,7 +343,7 @@ impl TacticalSystem for Pf2e {
 
     fn pair_damage(s: &CombatState, attacker: CombatantId, target: CombatantId, include_resources: bool, position: bool, cache: &mut Self::Cache) -> f64 {
         cache.pair(attacker, target, include_resources as u64 | (position as u64) << 1, || {
-            let d = round_damage(s, attacker, target, include_resources);
+            let d = sustained_round_damage(s, attacker, target, include_resources);
             if position {
                 d * engagement_factor(s, attacker, target)
             } else {
@@ -389,7 +389,7 @@ impl TacticalSystem for Pf2e {
     }
 
     fn round_damage(s: &CombatState, attacker: CombatantId, target: CombatantId, include_resources: bool) -> f64 {
-        round_damage(s, attacker, target, include_resources)
+        sustained_round_damage(s, attacker, target, include_resources)
     }
 
     fn engagement(s: &CombatState, attacker: CombatantId, target: CombatantId) -> f64 {

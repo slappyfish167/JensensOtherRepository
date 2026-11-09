@@ -37,8 +37,24 @@ win   ≈ 1 / (1 + e^(−1.6 · logit))
 ```
 
 Terminal positions are exactly ±10. The evaluation is antisymmetric (swapping the sides negates it;
-tested) and conditions need no special cases: frightened lowers the frightened creature's attack
-and AC inside the core's modifier computation, which changes `O` on both sides.
+tested) and conditions enter through the core's modifier computation: frightened lowers the
+frightened creature's attack and AC, which changes `O` on both sides.
+
+**Short-lived conditions** (PF2e `sustained_round_damage`). `O` describes the rest of the fight, so
+a condition that ends on the creature's next turn must not count as if it were permanent. Treating
+prone that way made a successful Trip score higher than an average Strike's damage, and the engine
+recommended Trip almost every turn. Now each pair's damage is the round with both creatures
+standing and unafraid, plus weighted corrections, each still computed by `round_damage`:
+
+| Condition | Real effect | Weight |
+|---|---|---|
+| attacker prone | spends its next turn's first action to Stand (never attacks at −2) | 1/3 (one round of ~3) |
+| target prone | off-guard only to attackers who act before it stands | 1/6 |
+| frightened *v* (either side) | decays by 1 each turn: `v + (v−1) + …` | `(v + 1) / 6` |
+
+With none of these present the value is exactly `round_damage`. Tests: prone and frightened 1 are
+each worth less than one average Strike; a lone brute with Athletics equal to its attack bonus
+Strikes rather than Trips.
 
 **Factor breakdown** (`evaluate_detailed`) is counterfactual — each factor is the change in score
 when that aspect is neutralised. Generic: Hit points, Offense vs defense, Position (assume everyone

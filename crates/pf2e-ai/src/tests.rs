@@ -405,3 +405,74 @@ fn explain_position_reports_flanking() {
     assert!(flank.text.contains("Orc"));
     assert!(flank.impact > 0.0, "the flanked enemy favours the party ({})", flank.impact);
 }
+
+/// A level-3 brute with good Athletics next to a fighter: the setup in which
+/// the engine used to recommend Trip every turn.
+fn brute_vs_fighter(athletics: i32) -> CombatState {
+    use pf2e_core::stats::Skill;
+    let mut brute = sb("Brute", 50, 18, 12, "1d10+6");
+    brute.level = 3;
+    brute.skills.insert(Skill::Athletics, athletics);
+    let mut hero = sb("Hero", 45, 19, 10, "1d8+4");
+    hero.reflex = 8;
+    let mut s = state(vec![p(hero, Side::Party, 5, 5), p(brute, Side::Enemy, 6, 5)]);
+    start(&mut s, &[1, 20]);
+    s
+}
+
+fn with_condition(s: &CombatState, who: usize, kind: pf2e_core::conditions::ConditionKind, value: u8) -> CombatState {
+    let mut s = s.clone();
+    s.combatants[who].conditions.add(pf2e_core::conditions::Condition::new(kind, value));
+    s
+}
+
+#[test]
+fn prone_is_worth_less_than_a_solid_hit() {
+    use pf2e_core::conditions::ConditionKind as CK;
+    let s = brute_vs_fighter(12);
+    let ev = HeuristicEvaluator::default();
+    let base = ev.evaluate(&s);
+    let prone = ev.evaluate(&with_condition(&s, 0, CK::Prone, 0));
+    let mut hit = s.clone();
+    hit.combatants[0].hp -= 11; // one average Brute Strike
+    let hit = ev.evaluate(&hit);
+    assert!(prone < base, "prone still helps the side that tripped: {base:.3} -> {prone:.3}");
+    assert!(base - prone < base - hit, "prone ({:.3}) must not outweigh 11 damage ({:.3})", base - prone, base - hit);
+}
+
+#[test]
+fn frightened_counts_for_its_duration_only() {
+    use pf2e_core::conditions::ConditionKind as CK;
+    let s = brute_vs_fighter(12);
+    let ev = HeuristicEvaluator::default();
+    let base = ev.evaluate(&s);
+    let f1 = ev.evaluate(&with_condition(&s, 0, CK::Frightened, 1));
+    let f2 = ev.evaluate(&with_condition(&s, 0, CK::Frightened, 2));
+    let mut hit = s.clone();
+    hit.combatants[0].hp -= 11;
+    let hit = ev.evaluate(&hit);
+    assert!(f2 < f1 && f1 < base, "{base:.3} {f1:.3} {f2:.3}");
+    assert!(base - f1 < base - hit, "frightened 1 ({:.3}) must not outweigh 11 damage ({:.3})", base - f1, base - hit);
+}
+
+#[test]
+fn a_lone_brute_strikes_instead_of_tripping_every_turn() {
+    // Athletics equal to its attack bonus: Trip is as likely to land as a
+    // Strike, but it trades the MAP-free Strike for a condition the hero
+    // shrugs off with one action.
+    for athletics in [10, 12, 14] {
+        let s = brute_vs_fighter(athletics);
+        let rec = recommend_turn(&s, SearchConfig::default()).unwrap();
+        assert!(!rec.plan.actions.iter().any(|a| matches!(a, Action::Trip { .. })), "Athletics +{athletics}: {:?}", rec.steps);
+        assert!(matches!(rec.plan.actions[0], Action::Strike { .. }), "Athletics +{athletics}: {:?}", rec.steps);
+    }
+}
+
+#[test]
+fn sustained_damage_matches_round_damage_without_transient_conditions() {
+    use crate::analysis::{round_damage, sustained_round_damage};
+    let s = brute_vs_fighter(12);
+    for (a, t) in [(CombatantId(1), CombatantId(2)), (CombatantId(2), CombatantId(1))] {
+        assert_eq!(sustained_round_damage(&s, a, t, true), round_damage(&s, a, t, true));
+    }
+}
